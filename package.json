@@ -19,6 +19,9 @@
   ],
   "author": "Bryon Vandiver",
   "license": "Apache-2.0",
+  "bin": {
+    "c88as": "./src/c88as.cli.js"
+  },
   "bugs": {
     "url": "https://github.com/asterick/s1c88-toolchain/issues"
   },
