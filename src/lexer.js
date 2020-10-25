@@ -24,20 +24,8 @@ const keywords = {
         "CALLS","SYMB","ALIGN","COMMENT","DEFINE","DEFSECT","END","FAIL","INCLUDE",
         "MSG","RADIX","SECT","UNDEF","WARN","EQU","EXTERN","GLOBAL","LOCAL","NAME",
         "SET","ASCII","ASCIZ","DB","DS","DW","DUP","DUPA","DUPC","DUPF","ENDIF",
-        "ENDM","EXITM","IF","MACRO","PMACRO"
+        "ENDM","EXITM","IF","MACRO","PMACRO","USING","ELSEIF"
     ],
-    registers: [
-        "A", "B", "L", "H", "YP", "XP",
-        "BA", "HL", "IX", "IY",
-        "NB", "EP", "XP", "YP", "SC", "SP"
-    ],
-    conditions: [
-        "C", "NC", "V", "NV",
-        "P", "M", "Z", "NZ",
-        "LT", "LE", "GT", "GE", "V", "NV", "NC",
-        "F0", "F1", "F2", "F3", 
-        "NF0", "NF1", "NF2", "NF3"
-    ]
 };
 
 // Our lexer
@@ -51,12 +39,18 @@ const lexer = moo.states({
             { match: "'", push: 'single_string' },
             { match: '"', push: 'double_string' },
         ],
-        function_name: { match: /@[a-zA-Z]+/, value: (v)=> v.slice(1) },
+        function_name: { match: /@[a-zA-Z]+/, value: (v) => v.slice(1) },
         identifier: {
             match: /[a-zA-Z_][a-zA-Z_0-9]*/,
             type: caseInsensitiveKeywords(keywords)
         },
-        number: /[0-9][0-9a-fA-F]*[bohBOH]?/,
+        number: [
+            { match: /[0-9][0-9a-fA-F]*[hH]/, value: (v) => parseInt(v, 16) },
+            { match: /[0-9]+[dD]?/, value: (v) => parseInt(v, 10) },
+            { match: /[0-7]+[oO]/, value: (v) => parseInt(v, 8) },
+            { match: /[01]+[bB]/, value: (v) => parseInt(v, 2) },
+            /[0-9][0-9a-fA-F]*/
+        ],
 
         open_paren: "(",
         close_paren: ")",
@@ -66,8 +60,7 @@ const lexer = moo.states({
         colon: ":",
 
         operator: [
-            "\\?",
-            "\\%",
+            "\\", "\\?", "\\%",
             "<<", ">>",
             "!=", "==", ">=", "<=", ">", "<",
             "&&", "||", "&", "|", "^", "~", "!", 

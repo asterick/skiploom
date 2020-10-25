@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-const nearley = require("nearley");
-const grammar = require("./grammar.js");
 
-const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
+const parser = require("./parsers").expression;
 
-parser.feed('"Hello world\\n\\r\x31" ; This is a comment \\\n more text\n')
+parser.feed('(1+2)')
+
+//parser.feed('^SomeLabel\\SomeOtherLabel: ADC [HL], #@COFF(0FACEh * MAP_PTR, 5h), "asdf\\n" ; Some comment\\\n Some more comment\n')
 console.log(JSON.stringify(parser.results, null, 4))
