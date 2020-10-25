@@ -24,6 +24,7 @@ _main:
         EXTERN  (CODE, SHORT) __START
         EXTERN  (DATA) __lc_es
         END
+        LD      A, @fArTs(1,2,3)
 `
 
 parser.feed(file)

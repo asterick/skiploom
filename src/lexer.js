@@ -24,8 +24,6 @@ function escape(text) {
     return text;
 }
 
-console.log(escape("Hello[\\x21][\\33]"));
-
 // Reserved words
 const keywords = {
     reserved: [
@@ -39,15 +37,15 @@ const keywords = {
 
 // Our lexer
 const lexer = moo.compile({
-    continuation: { match: /\\\r\n?|\\\n\r?/, lineBreaks: true },
+    ws: { match: /[ \t\f\v]+/ },
     linefeed: { match:  /\r\n?|\n\r?/, lineBreaks: true },
-    comment: /;(?:[^\n\r\\]|\\(?:\n?\r?|\r?\n?))*(?=\n\r?|\r\n?)/,
-    ws: { match: /[ \t]/, discard: true },
+    continuation: { match: /\\\r\n?|\\\n\r?/, lineBreaks: true },
+    comment: { match:/;(?:[^\n\r\\]|\\(?:\n?\r?|\r?\n?))*/, lineBreaks: true },
     string: [
         { match: /"(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r"])+"/, value: (s) => escape(s.slice(1,-1)) },
         { match: /'(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r'])+'/, value: (s) => escape(s.slice(1,-1)) },
     ],
-    function_name: { match: /@[a-zA-Z]+/, value: (v) => v.slice(1) },
+    function_name: { match: /@[a-zA-Z]+/, value: (v) => v.slice(1).toUpperCase() },
     identifier: {
         match: /[a-zA-Z_][a-zA-Z_0-9]*/,
         type: caseInsensitiveKeywords(keywords),
