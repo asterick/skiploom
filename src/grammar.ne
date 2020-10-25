@@ -1,4 +1,3 @@
-# TODO: DEFSECT
 # TDOO: Proper AST values
 
 @{% 
@@ -13,61 +12,87 @@ function at(index) { return (data) => data[index] }
 main -> source_line:*
 
 source_line ->
-    label:? directive:? comment:? %linefeed
+    label:? directive:? eol
 
 label ->
       symbol %colon {% ([name]) => ({ type: "Label", name }) %}
 
 directive ->
-      symbol expression_list
-    | "CALLS" expression_list
-    | "SYMB" expression_list
+      symbol expression_list:?
+    | "$" symbol expression_list # These are discarded
+    | %word_calls expression_list
+    | %word_symb expression_list
 
-    #| "DEFSECT"
-    | "SECT" expression ("," "RESET"):?
-    | "ALIGN" expression
-    | "DEFINE" symbol expression
-    | "UNDEF" symbol_list
-    | "MSG" expression_list
-    | "WARN" expression_list
-    | "FAIL" expression_list
-    | "INCLUDE" expression ("USING" expression):?
-    | "RADIX" number
-    | "UNDEF" symbol
-    | "END"
+    | define_section_directive
+    | %word_sect expression ("," "RESET"):?
+    | %word_align expression
+    | %word_define symbol expression
+    | %word_undef symbol_list
+    | %word_msg expression_list
+    | %word_warn expression_list
+    | %word_fail expression_list
+    | %word_include expression (%word_using expression):?
+    | %word_radix number
+    | %word_undef symbol
+    | %word_end
 
-    | symbol "EQU" expression
-    | symbol "SET" expression
-    | "EXTERN" ("(" symbol_list ")"):? symbol_list
-    | "LOCAL" symbol_list
-    | "GLOBAL" symbol_list
-    | "NAME" expression
+    | symbol %word_equ expression
+    | symbol %word_set expression
+    | %word_extern ("(" symbol_list ")"):? symbol_list
+    | %word_local symbol_list
+    | %word_global symbol_list
+    | %word_name expression
 
-    | "ASCII" expression_list
-    | "ASCIZ" expression_list
-    | "DB" expression_list
-    | "DW" expression_list
-    | "DS" expression
+    | %word_ascii expression_list
+    | %word_asciz expression_list
+    | %word_db expression_list
+    | %word_dw expression_list
+    | %word_ds expression
 
-    | "DUP" expression comment:? %linefeed 
-      source_line:* "ENDM"
-    | "DUPA" symbol "," expression_list comment:? %linefeed 
-      source_line:* "ENDM"
-    | "DUPC" symbol "," expression comment:? %linefeed 
-      source_line:* "ENDM"
-    | "DUPF" symbol ("," expression):? "," expression ("," expression):? comment:? %linefeed 
-      source_line:* "ENDM"
-    | symbol "MACRO" symbol_list comment:? %linefeed
-      source_line:* "ENDM"
+    | %word_dup expression eol
+      source_line:* %word_endm
+    | %word_dupa symbol "," expression_list eol
+      source_line:* %word_endm
+    | %word_dupc symbol "," expression eol
+      source_line:* %word_endm
+    | %word_dupf symbol ("," expression):? "," expression ("," expression):? eol
+      source_line:* %word_endm
+    | symbol %word_macro symbol_list eol
+      source_line:* %word_endm
     | if_directive
-    | "PMACRO" symbol_list
-    | "IF" expression comment:? %linefeed source_line:*
-      ("ELSEIF" expression comment:? %linefeed ):*
-      ("ELSE" expression comment:? %linefeed ):?
-      "ENDIF"
+    | %word_pmacro symbol_list
 
 comment -> 
       %comment {% id %}
+
+eol ->
+      comment:? %linefeed
+
+# Directives
+if_directive ->
+      %word_if expression eol source_line:*
+      (%word_elseif expression eol ):*
+      (%word_else expression eol ):?
+      %word_endif
+
+define_section_directive ->
+      %word_defsect expression "," section_type ("," section_attr):* ("AT" expression):?
+
+section_type ->
+      %word_data 
+    | %word_code
+
+section_attr ->
+      %word_short
+    | %word_tiny
+    | %word_fit expression
+    | %word_overlay
+    | %word_romdata
+    | %word_noclear
+    | %word_clear
+    | %word_init
+    | %word_max
+    | %word_join
 
 # Lists
 expression_list ->
@@ -138,7 +163,7 @@ unary_expr ->
 top_level_expr ->
       "(" expression ")" {% at(1) %}
     | "[" expression "]"
-    | "#" expression
+    | "#" expression {% at(1) %}
     | "*"
     | %function_name "(" expression_list ")"
     | number {% id %}
@@ -158,7 +183,14 @@ symbol ->
     | symbol "\\?" %identifier
     | symbol "\\%" %identifier
     | "^" symbol
-    | %identifier
+    | identifier
+
+identifier ->
+      %identifier
+    # These are just here so these can be case insensitive
+    | %word_data | %word_code 
+    | %word_short | %word_tiny
+    | %word_fit | %word_overlay | %word_romdata | %word_noclear | %word_clear | %word_init | %word_max | %word_join
 
 number ->
       %number

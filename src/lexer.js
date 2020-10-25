@@ -5,6 +5,25 @@ const caseInsensitiveKeywords = (map) => {
     return (text) => transform(text.toUpperCase())
 }
 
+function asKeys(... list) {
+    return list.reduce((acc, v) => { 
+        acc["word_"+v.toLowerCase()] = v.toUpperCase()
+        return acc;
+    }, {})
+}
+
+function filter_whitespace(lexer) {
+    const old = lexer.next;
+
+    return (... args) => {
+        for (;;) {
+            let token = old.apply(lexer, args);
+            if (token && token.type == 'ws') continue ;
+            return token;
+        }
+    }
+}
+
 // These are common between all string types
 const escaped = [
     { match: /\\['"\\]/, value: (x) => x.slice(1) },
@@ -19,14 +38,16 @@ const escaped = [
 ];
 
 // Reserved words
-const keywords = {
-    reserved: [
+const keywords = asKeys(
+        // Reserved words
         "CALLS","SYMB","ALIGN","COMMENT","DEFINE","DEFSECT","END","FAIL","INCLUDE",
         "MSG","RADIX","SECT","UNDEF","WARN","EQU","EXTERN","GLOBAL","LOCAL","NAME",
         "SET","ASCII","ASCIZ","DB","DS","DW","DUP","DUPA","DUPC","DUPF","ENDIF",
-        "ENDM","EXITM","IF","MACRO","PMACRO","USING","ELSEIF"
-    ],
-};
+        "ENDM","EXITM","IF","MACRO","PMACRO","USING","ELSEIF",
+
+        // These are not reserved words, but we need case insensitive matching
+        "DATA", "CODE", "SHORT", "TINY", "FIT", "OVERLAY", "ROMDATA", "NOCLEAR", "CLEAR", "INIT", "MAX", "JOIN"
+    );
 
 // Our lexer
 const lexer = moo.states({
@@ -58,6 +79,7 @@ const lexer = moo.states({
         close_bracket: "]",
         comma: ",",
         colon: ":",
+        dollar: "$",
 
         operator: [
             "\\", "\\?", "\\%",
@@ -80,19 +102,6 @@ const lexer = moo.states({
         escaped
     }
 });
-
-// This is a helper to discard whitespace preemptively to make our grammer simpler
-function filter_whitespace(lexer) {
-    const old = lexer.next;
-
-    return (... args) => {
-        for (;;) {
-            let token = old.apply(lexer, args);
-            if (token && token.type == 'ws') continue ;
-            return token;
-        }
-    }
-}
 
 lexer.next = filter_whitespace(lexer);
 module.exports = lexer;
