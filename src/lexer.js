@@ -38,16 +38,15 @@ const escaped = [
 ];
 
 // Reserved words
-const keywords = asKeys(
+const keywords = {
+    reserved: [
         // Reserved words
         "CALLS","SYMB","ALIGN","COMMENT","DEFINE","DEFSECT","END","FAIL","INCLUDE",
         "MSG","RADIX","SECT","UNDEF","WARN","EQU","EXTERN","GLOBAL","LOCAL","NAME",
         "SET","ASCII","ASCIZ","DB","DS","DW","DUP","DUPA","DUPC","DUPF","ENDIF",
         "ENDM","EXITM","IF","MACRO","PMACRO","USING","ELSEIF",
-
-        // These are not reserved words, but we need case insensitive matching
-        "DATA", "CODE", "SHORT", "TINY", "FIT", "OVERLAY", "ROMDATA", "NOCLEAR", "CLEAR", "INIT", "MAX", "JOIN"
-    );
+    ]
+};
 
 // Our lexer
 const lexer = moo.states({
@@ -63,7 +62,8 @@ const lexer = moo.states({
         function_name: { match: /@[a-zA-Z]+/, value: (v) => v.slice(1) },
         identifier: {
             match: /[a-zA-Z_][a-zA-Z_0-9]*/,
-            type: caseInsensitiveKeywords(keywords)
+            type: caseInsensitiveKeywords(keywords),
+            value: (word) => word.toUpperCase()
         },
         number: [
             { match: /[0-9][0-9a-fA-F]*[hH]/, value: (v) => parseInt(v, 16) },

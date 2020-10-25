@@ -20,47 +20,47 @@ label ->
 directive ->
       symbol expression_list:?
     | "$" symbol expression_list # These are discarded
-    | %word_calls expression_list
-    | %word_symb expression_list
+    | "CALLS" expression_list
+    | "SYMB" expression_list
 
     | define_section_directive
-    | %word_sect expression ("," "RESET"):?
-    | %word_align expression
-    | %word_define symbol expression
-    | %word_undef symbol_list
-    | %word_msg expression_list
-    | %word_warn expression_list
-    | %word_fail expression_list
-    | %word_include expression (%word_using expression):?
-    | %word_radix number
-    | %word_undef symbol
-    | %word_end
+    | "SECT" expression ("," "RESET"):?
+    | "ALIGN" expression
+    | "DEFINE" symbol expression
+    | "UNDEF" symbol_list
+    | "MSG" expression_list
+    | "WARN" expression_list
+    | "FAIL" expression_list
+    | "INCLUDE" expression ("USING" expression):?
+    | "RADIX" number
+    | "UNDEF" symbol
+    | "END"
 
-    | symbol %word_equ expression
-    | symbol %word_set expression
-    | %word_extern ("(" symbol_list ")"):? symbol_list
-    | %word_local symbol_list
-    | %word_global symbol_list
-    | %word_name expression
+    | symbol "EQU" expression
+    | symbol "SET" expression
+    | "EXTERN" ("(" symbol_list ")"):? symbol_list
+    | "LOCAL" symbol_list
+    | "GLOBAL" symbol_list
+    | "NAME" expression
 
-    | %word_ascii expression_list
-    | %word_asciz expression_list
-    | %word_db expression_list
-    | %word_dw expression_list
-    | %word_ds expression
+    | "ASCII" expression_list
+    | "ASCIZ" expression_list
+    | "DB" expression_list
+    | "DW" expression_list
+    | "DS" expression
 
-    | %word_dup expression eol
-      source_line:* %word_endm
-    | %word_dupa symbol "," expression_list eol
-      source_line:* %word_endm
-    | %word_dupc symbol "," expression eol
-      source_line:* %word_endm
-    | %word_dupf symbol ("," expression):? "," expression ("," expression):? eol
-      source_line:* %word_endm
-    | symbol %word_macro symbol_list eol
-      source_line:* %word_endm
+    | "DUP" expression eol
+      source_line:* "ENDM"
+    | "DUPA" symbol "," expression_list eol
+      source_line:* "ENDM"
+    | "DUPC" symbol "," expression eol
+      source_line:* "ENDM"
+    | "DUPF" symbol ("," expression):? "," expression ("," expression):? eol
+      source_line:* "ENDM"
+    | symbol "MACRO" symbol_list eol
+      source_line:* "ENDM"
     | if_directive
-    | %word_pmacro symbol_list
+    | "PMACRO" symbol_list
 
 comment -> 
       %comment {% id %}
@@ -70,29 +70,29 @@ eol ->
 
 # Directives
 if_directive ->
-      %word_if expression eol source_line:*
-      (%word_elseif expression eol ):*
-      (%word_else expression eol ):?
-      %word_endif
+      "IF" expression eol source_line:*
+      ("ELSEIF" expression eol ):*
+      ("ELSE" expression eol ):?
+      "ENDIF"
 
 define_section_directive ->
-      %word_defsect expression "," section_type ("," section_attr):* ("AT" expression):?
+      "DEFSECT" expression "," section_type ("," section_attr):* ("AT" expression):?
 
 section_type ->
-      %word_data 
-    | %word_code
+      "DATA" 
+    | "CODE"
 
 section_attr ->
-      %word_short
-    | %word_tiny
-    | %word_fit expression
-    | %word_overlay
-    | %word_romdata
-    | %word_noclear
-    | %word_clear
-    | %word_init
-    | %word_max
-    | %word_join
+      "SHORT"
+    | "TINY"
+    | "FIT" expression
+    | "OVERLAY"
+    | "ROMDATA"
+    | "NOCLEAR"
+    | "CLEAR"
+    | "INIT"
+    | "MAX"
+    | "JOIN"
 
 # Lists
 expression_list ->
@@ -187,10 +187,6 @@ symbol ->
 
 identifier ->
       %identifier
-    # These are just here so these can be case insensitive
-    | %word_data | %word_code 
-    | %word_short | %word_tiny
-    | %word_fit | %word_overlay | %word_romdata | %word_noclear | %word_clear | %word_init | %word_max | %word_join
 
 number ->
       %number

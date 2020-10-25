@@ -27,4 +27,4 @@ _main:
 `
 
 parser.feed(file)
-//console.log(JSON.stringify(parser.results, null, 4))
+console.log(JSON.stringify(parser.results, null, 4))
