@@ -172,7 +172,7 @@ top_level_expr ->
 
 # Atomic values
 string ->
-      %string_start string_part:* %string_end  {% (data) => data[1].join("") %}
+      %string {% value %}
 
 string_part ->
       %characters {% value %}
