@@ -56,13 +56,13 @@ source_body ->
       source_line:* {% ([directives]) => directives.flat(2).filter((v) => v != null) %}
 
 source_line ->
-      label:? directive:? eol 
+      label:? directive:? eol
 
 label ->
       symbol %colon {% ([name]) => ({ type: "Label", name, location:location(name) }) %}
 
 eol ->
-      %comment:? %linefeed {% ([comment]) => (comment && { type: "Comment", text:comment.text, location:location(comment) }) %}
+      %comment:? %linefeed {% ignore %}
 
 # Directives
 directive ->
@@ -91,30 +91,36 @@ directive ->
     | "GLOBAL" symbol_list
     | "NAME" expression
 
-    | "ASCII" expression_list
-    | "ASCIZ" expression_list
-    | "DB" expression_list
-    | "DW" expression_list
-    | "DS" expression
+    | "ASCII" expression_list {% ([id,data]) => ({ type: "AsciiBlock", data, location:location(id) }) %}
+    | "ASCIZ" expression_list {% ([id,data]) => ({ type: "TerminatedAsciiBlock", data, location:location(id) }) %}
+    | "DB" expression_list {% ([id,data]) => ({ type: "DataBytes", data, location:location(id) }) %}
+    | "DW" expression_list {% ([id,data]) => ({ type: "DataWords", data, location:location(id) }) %}
+    | "DS" expression {% ([id,size]) => ({ type: "DataAllocate", size, location:location(id) }) %}
 
-    | "DUP" expression eol
-      source_body "ENDM"
-    | "DUPA" symbol "," expression_list eol
-      source_body "ENDM"
-    | "DUPC" symbol "," expression eol
-      source_body "ENDM"
-    | "DUPF" symbol ("," expression):? "," expression ("," expression):? eol
-      source_body "ENDM"
-    | symbol "MACRO" symbol_list eol
-      source_body "ENDM"
+    | "PMACRO" symbol_list {% ([id,names]) => ({ type: "PurgeMacros", names, location:location(id) }) %}
+    | "DUP" expression eol source_body "ENDM" 
+      {% ([id,count,,body]) => ({ type: "CountDup", count, body, location:location(id) }) %}
+    | "DUPA" symbol "," expression_list eol source_body "ENDM"
+      {% ([id,variable,,list,,body]) => ({ type: "ListDup", variable, list, body, location:location(id) }) %}
+    | "DUPC" symbol "," expression eol source_body "ENDM" 
+      {% ([id,variable,,string,,body]) => ({ type: "CharacterDup", variable, string, body, location:location(id) }) %}
+    | "DUPF" symbol ("," expression  {% at(1) %}):? "," expression ("," expression {% at(1) %}):? eol source_body "ENDM" 
+      {% ([id,variable,start,,end,step,,body]) => ({ type: "SequenceDup", variable, start, end, step, body, location:location(id) }) %}
+    | symbol "MACRO" symbol_list eol source_body "ENDM"
+      {% ([name,,parameters,,body]) => ({ type: "MacroDefinition", name, parameters, body, location:name.location }) %}
     | if_directive
-    | "PMACRO" symbol_list
 
 if_directive ->
       "IF" expression eol source_body
-      ("ELSEIF" expression eol source_body):*
-      ("ELSE" eol source_body):?
+      ("ELSEIF" expression eol source_body {% ([,test,,body]) => ({ test, body }) %}):*
+      ("ELSE" eol source_body {% at(2) %}):?
       "ENDIF"
+      {% ([id,test,,body,elseifs,otherwise]) => ({
+            type: "IfClause",
+            test, body,
+            elseifs, otherwise,
+            location:location(id)
+      }) %}
 
 define_section_directive ->
       "DEFSECT" expression "," section_type ("," section_attr {% at(1) %}):* ("AT" expression {% at(1) %}):?

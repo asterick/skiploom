@@ -24,7 +24,7 @@ _main:
         EXTERN  (CODE, SHORT) __START
         EXTERN  (DATA) __lc_es
         END
-        DEFSECT ".main", CODE, SHORT, FIT 10000h, ROMDATA, JOIN AT 3000h
+        ASCII "asdf"
 `
 
 parser.feed(file)
