@@ -34,6 +34,7 @@ const BinaryOperations = {
 }
 
 function at(index) { return (data) => data[index] }
+function ignore() { return null }
 function location({ line, col }) {
       return { line, col }
 }
@@ -63,9 +64,10 @@ label ->
 eol ->
       %comment:? %linefeed {% ([comment]) => (comment && { type: "Comment", text:comment.text, location:location(comment) }) %}
 
+# Directives
 directive ->
       symbol expression_list:?
-    | "$" symbol expression_list {%()=>null%}# These are discarded
+    | "$" symbol expression_list {% ignore %}
     | "CALLS" expression_list
     | "SYMB" expression_list
 
@@ -108,7 +110,6 @@ directive ->
     | if_directive
     | "PMACRO" symbol_list
 
-# Directives
 if_directive ->
       "IF" expression eol source_body
       ("ELSEIF" expression eol source_body):*
@@ -117,22 +118,31 @@ if_directive ->
 
 define_section_directive ->
       "DEFSECT" expression "," section_type ("," section_attr {% at(1) %}):* ("AT" expression {% at(1) %}):?
+      {% ([id,name,,datatype,attributes,at]) => {
+          const blob = {
+                type: "DefineSection",               
+                name, datatype, at,
+                location: location(id)
+          }
+          Object.assign(blob, ...attributes)
+          return blob;
+      } %}
 
 section_type ->
       "DATA" {% () => "data" %}
     | "CODE" {% () => "code" %}
 
 section_attr ->
-      "SHORT" # TODO: RETURN VALUE HERE
-    | "TINY" # TODO: RETURN VALUE HERE
-    | "FIT" expression # TODO: RETURN VALUE HERE
-    | "OVERLAY" # TODO: RETURN VALUE HERE
-    | "ROMDATA" # TODO: RETURN VALUE HERE
-    | "NOCLEAR" # TODO: RETURN VALUE HERE
-    | "CLEAR" # TODO: RETURN VALUE HERE
-    | "INIT" # TODO: RETURN VALUE HERE
-    | "MAX" # TODO: RETURN VALUE HERE
-    | "JOIN" # TODO: RETURN VALUE HERE
+      "SHORT" {% () => ({ model: "short" }) %}
+    | "TINY" {% () => ({ model: "tiny" }) %}
+    | "FIT" expression {% ([,fit]) => ({ fit }) %}
+    | "OVERLAY" {% () => ({ target: "overlay" }) %}
+    | "ROMDATA" {% () => ({ target: "romdata" }) %}
+    | "NOCLEAR" {% () => ({ target: "noclear" }) %}
+    | "CLEAR" {% () => ({ target: "clear" }) %}
+    | "INIT" {% () => ({ target: "init" }) %}
+    | "MAX" {% () => ({ target: "max" }) %}
+    | "JOIN" {% () => ({ join: true }) %}
 
 # Lists
 expression_list ->

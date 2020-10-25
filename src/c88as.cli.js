@@ -24,7 +24,7 @@ _main:
         EXTERN  (CODE, SHORT) __START
         EXTERN  (DATA) __lc_es
         END
-        LD      A, @fArTs(1,2,3)
+        DEFSECT ".main", CODE, SHORT, FIT 10000h, ROMDATA, JOIN AT 3000h
 `
 
 parser.feed(file)
