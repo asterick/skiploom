@@ -1,5 +1,3 @@
-# TODO: Proper AST values
-
 @{% 
 const lexer = require("./lexer.js"); 
 const UnaryOperations = {
@@ -83,7 +81,13 @@ directive ->
     | "RADIX" expression {% ([id, value]) => ({ type: "RadixDirective", value, location:location(id) }) %}
     | "END" {% ([id]) => ({ type: "EndDirective", location:location(id) }) %}
 
-    | "EXTERN" ("(" symbol_list ")" {% at(1) %}):? symbol_list # TODO
+    | "EXTERN" extern_attr_list:? symbol_list
+      {% ([id,attributes,names]) => Object.assign({
+                type: "ExternDirective",
+                location: location(id),
+                names
+          }, ... attributes)
+      %}
     | symbol "EQU" expression {% ([name, value]) => ({ type: "EquateDirective", name, value, location:name.location }) %}
     | symbol "SET" expression {% ([name, value]) => ({ type: "SetDirective", name, value, location:name.location }) %}
     | "LOCAL" symbol_list {% ([id, names]) => ({ type: "LocalDirective", names, location:location(id) }) %}
@@ -123,19 +127,22 @@ if_directive ->
 
 define_section_directive ->
       "DEFSECT" expression "," section_type ("," section_attr {% at(1) %}):* ("AT" expression {% at(1) %}):?
-      {% ([id,name,,datatype,attributes,at]) => {
-          const blob = {
+      {% ([id,name,,datatype,attributes,at]) => Object.assign({
                 type: "DefineSectionDirective",               
                 name, datatype, at,
                 location: location(id)
-          }
-          Object.assign(blob, ...attributes)
-          return blob;
-      } %}
+          }, ...attributes)
+      %}
 
 section_type ->
       "DATA" {% () => "data" %}
     | "CODE" {% () => "code" %}
+
+extern_attr ->
+      "SHORT" {% () => ({ model: "short" }) %}
+    | "TINY" {% () => ({ model: "tiny" }) %}
+    | "DATA" {% () => ({ location: "data"}) %}
+    | "CODE" {% () => ({ location: "code"}) %}
 
 section_attr ->
       "SHORT" {% () => ({ model: "short" }) %}
@@ -150,6 +157,9 @@ section_attr ->
     | "JOIN" {% () => ({ join: true }) %}
 
 # Lists
+extern_attr_list ->
+      "(" (extern_attr "," {% id %}):* extern_attr ")" {% ([,list,tail]) => list.concat(tail) %}
+
 expression_list ->
       (expression "," {% id %}):* expression {% ([list, tail]) => list.concat(tail) %}
 
