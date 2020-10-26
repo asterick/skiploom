@@ -48,8 +48,7 @@ const lexer = moo.compile({
     function_name: { match: /@[a-zA-Z]+/, value: (v) => v.slice(1).toUpperCase() },
     identifier: {
         match: /[a-zA-Z_][a-zA-Z_0-9]*/,
-        type: caseInsensitiveKeywords(keywords),
-        value: (word) => word.toUpperCase()
+        type: caseInsensitiveKeywords(keywords)
     },
     number: [
         { match: /[0-9][0-9a-fA-F]*[hH]/, value: (v) => parseInt(v, 16) },

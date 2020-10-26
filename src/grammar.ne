@@ -100,6 +100,7 @@ directive ->
     | "DW" expression_list {% ([id,data]) => ({ type: "DataWordsDirective", data, location:location(id) }) %}
     | "DS" expression {% ([id,size]) => ({ type: "DataAllocateDirective", size, location:location(id) }) %}
 
+    | "EXITM" {% ([id]) => ({ type: "ExitMacroDirective", location:location(id) }) %}
     | "PMACRO" symbol_list {% ([id,names]) => ({ type: "PurgeMacrosDirective", names, location:location(id) }) %}
     | "DUP" expression eol source_body "ENDM" 
       {% ([id,count,,body]) => ({ type: "CountDupDirective", count, body, location:location(id) }) %}
@@ -244,7 +245,7 @@ symbol ->
     | "^" symbol {% unary %}
 
 identifier ->
-      %identifier {% ([id]) => ({ type:"Identifier", name:id.text, location:location(id) }) %}
+      %identifier {% ([id]) => ({ type:"Identifier", name:id.value, location:location(id) }) %}
 
 string ->
       %string {% ([id]) => ({ type:"String", value:id.value, location:location(id) }) %}
