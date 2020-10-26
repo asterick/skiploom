@@ -24,6 +24,7 @@ const BinaryOperations = {
       "<=": "LessEqual",
       "<<": "ShiftLeft",
       ">>": "ShiftRight",
+      "..": "Concatinate",
       "+": "Add",
       "-": "Subtract",
       "*": "Multiply",
@@ -197,11 +198,15 @@ equality_expr ->
     | equality_expr "!=" compare_expr {% binary %}
 
 compare_expr ->
+      concat_expr {% id %}
+    | compare_expr ">=" concat_expr {% binary %}
+    | compare_expr "<=" concat_expr {% binary %}
+    | compare_expr ">" concat_expr {% binary %}
+    | compare_expr "<" concat_expr {% binary %}
+
+concat_expr ->
       shift_expr {% id %}
-    | compare_expr ">=" shift_expr {% binary %}
-    | compare_expr "<=" shift_expr {% binary %}
-    | compare_expr ">" shift_expr {% binary %}
-    | compare_expr "<" shift_expr {% binary %}
+    | shift_expr ".." concat_expr {% binary %}
 
 shift_expr ->
       add_sub_expr {% id %}

@@ -11,17 +11,26 @@ function filter_whitespace(lexer) {
     return (... args) => {
         for (;;) {
             let token = old.apply(lexer, args);
-            if (token && token.type == 'ws') continue ;
+            switch ((token || {}).type) {
+                case 'ws': 
+                    continue ;
+                case 'identifer':
+                case 'reserved':
+                    // This allows us to match against reserved words
+                    // without case sensitivity using literals in the
+                    // parser.
+                    token.text = token.text.toUpperCase();
+                    break ;
+            }
             return token;
         }
     }
 }
 
 function escape(text) {
-    text = text.replace(/\\['"tTvVbBfFnNrR]/g, (v) => JSON.parse(`"${v}"`));
     text = text.replace(/\\([0-9]+)/g, (_,v) => String.fromCharCode(parseInt(v, 10)));
     text = text.replace(/\\x([0-9a-f]+)/ig, (_,v) => String.fromCharCode(parseInt(v, 16)));
-    return text;
+    return JSON.parse(`"${text}"`);
 }
 
 // Reserved words
@@ -73,7 +82,7 @@ const lexer = moo.compile({
         "&&", "||", "&", "|", "^", "~", "!", 
         "+", "-",
         "/", "*", "%",
-        "#",
+        "#", ".."
     ]
 });
 
