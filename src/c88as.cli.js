@@ -12,6 +12,7 @@ $MODEL S
         GLOBAL  _main
         DEFSECT ".text", CODE
         SECT    ".text"
+        ALIGN   16
 _main:
         SYMB    TYPE, 257, 'X', 8, #16, 2, 0
         SYMB    ALAB, _main, #257
@@ -24,7 +25,7 @@ _main:
         EXTERN  (CODE, SHORT) __START
         EXTERN  (DATA) __lc_es
         END
-        ASCII "asdf"
+        INCLUDE "myinclude.inc" USING "transform.js"
 `
 
 parser.feed(file)

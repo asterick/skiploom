@@ -66,48 +66,47 @@ eol ->
 
 # Directives
 directive ->
-      symbol expression_list:?
+      symbol expression_list:? {% ([call, parameters]) => ({ type: "DispatchDirective", call, parameters, location:call.location }) %}
     | "$" symbol expression_list {% ignore %}
-    | "CALLS" expression_list
-    | "SYMB" expression_list
+    | "CALLS" expression_list {% ignore %}
+    | "SYMB" expression_list {% ignore %}
 
     | define_section_directive
-    | "SECT" expression ("," "RESET"):?
-    | "ALIGN" expression
-    | "DEFINE" symbol expression
-    | "UNDEF" symbol_list
-    | "MSG" expression_list
-    | "WARN" expression_list
-    | "FAIL" expression_list
-    | "INCLUDE" expression ("USING" expression):?
-    | "RADIX" number
-    | "UNDEF" symbol
-    | "END"
+    | "SECT" expression ("," "RESET"):? {% ([id,name,reset]) => ({ type: "SectionDirective", name, reset: reset != null, location:location(id)}) %}
+    | "ALIGN" expression {% ([id, value]) => ({ type: "AlignDirective", value, location:location(id) }) %}
+    | "DEFINE" symbol expression {% ([id, name, value]) => ({ type: "DefineDirective", name, value, location:location(id) }) %}
+    | "UNDEF" symbol_list {% ([id, names]) => ({ type: "UndefineDirective", names, location:location(id) }) %}
+    | "MSG" expression_list {% ([id, message]) => ({ type: "MessageDirective", message, location:location(id) }) %}
+    | "WARN" expression_list {% ([id, message]) => ({ type: "WarningDirective", message, location:location(id) }) %}
+    | "FAIL" expression_list {% ([id, message]) => ({ type: "FailureDirective", message, location:location(id) }) %}
+    | "INCLUDE" expression ("USING" expression {% at(1) %}):? {% ([id, path, transform]) => ({ type: "IncludeDirective", path, transform, location:location(id) }) %}
+    | "RADIX" expression {% ([id, value]) => ({ type: "RadixDirective", value, location:location(id) }) %}
+    | "END" {% ([id]) => ({ type: "EndDirective", location:location(id) }) %}
 
-    | symbol "EQU" expression
-    | symbol "SET" expression
-    | "EXTERN" ("(" symbol_list ")"):? symbol_list
-    | "LOCAL" symbol_list
-    | "GLOBAL" symbol_list
-    | "NAME" expression
+    | "EXTERN" ("(" symbol_list ")" {% at(1) %}):? symbol_list # TODO
+    | symbol "EQU" expression {% ([name, value]) => ({ type: "EquateDirective", name, value, location:name.location }) %}
+    | symbol "SET" expression {% ([name, value]) => ({ type: "SetDirective", name, value, location:name.location }) %}
+    | "LOCAL" symbol_list {% ([id, names]) => ({ type: "LocalDirective", names, location:location(id) }) %}
+    | "GLOBAL" symbol_list {% ([id, names]) => ({ type: "GlobalDirective", names, location:location(id) }) %}
+    | "NAME" expression {% ([id, name]) => ({ type: "NameDirective", name, location:location(id) }) %}
 
-    | "ASCII" expression_list {% ([id,data]) => ({ type: "AsciiBlock", data, location:location(id) }) %}
-    | "ASCIZ" expression_list {% ([id,data]) => ({ type: "TerminatedAsciiBlock", data, location:location(id) }) %}
-    | "DB" expression_list {% ([id,data]) => ({ type: "DataBytes", data, location:location(id) }) %}
-    | "DW" expression_list {% ([id,data]) => ({ type: "DataWords", data, location:location(id) }) %}
-    | "DS" expression {% ([id,size]) => ({ type: "DataAllocate", size, location:location(id) }) %}
+    | "ASCII" expression_list {% ([id,data]) => ({ type: "AsciiBlockDirective", data, location:location(id) }) %}
+    | "ASCIZ" expression_list {% ([id,data]) => ({ type: "TerminatedAsciiBlockDirective", data, location:location(id) }) %}
+    | "DB" expression_list {% ([id,data]) => ({ type: "DataBytesDirective", data, location:location(id) }) %}
+    | "DW" expression_list {% ([id,data]) => ({ type: "DataWordsDirective", data, location:location(id) }) %}
+    | "DS" expression {% ([id,size]) => ({ type: "DataAllocateDirective", size, location:location(id) }) %}
 
-    | "PMACRO" symbol_list {% ([id,names]) => ({ type: "PurgeMacros", names, location:location(id) }) %}
+    | "PMACRO" symbol_list {% ([id,names]) => ({ type: "PurgeMacrosDirective", names, location:location(id) }) %}
     | "DUP" expression eol source_body "ENDM" 
-      {% ([id,count,,body]) => ({ type: "CountDup", count, body, location:location(id) }) %}
+      {% ([id,count,,body]) => ({ type: "CountDupDirective", count, body, location:location(id) }) %}
     | "DUPA" symbol "," expression_list eol source_body "ENDM"
-      {% ([id,variable,,list,,body]) => ({ type: "ListDup", variable, list, body, location:location(id) }) %}
+      {% ([id,variable,,list,,body]) => ({ type: "ListDupDirective", variable, list, body, location:location(id) }) %}
     | "DUPC" symbol "," expression eol source_body "ENDM" 
-      {% ([id,variable,,string,,body]) => ({ type: "CharacterDup", variable, string, body, location:location(id) }) %}
+      {% ([id,variable,,string,,body]) => ({ type: "CharacterDupDirective", variable, string, body, location:location(id) }) %}
     | "DUPF" symbol ("," expression  {% at(1) %}):? "," expression ("," expression {% at(1) %}):? eol source_body "ENDM" 
-      {% ([id,variable,start,,end,step,,body]) => ({ type: "SequenceDup", variable, start, end, step, body, location:location(id) }) %}
+      {% ([id,variable,start,,end,step,,body]) => ({ type: "SequenceDupDirective", variable, start, end, step, body, location:location(id) }) %}
     | symbol "MACRO" symbol_list eol source_body "ENDM"
-      {% ([name,,parameters,,body]) => ({ type: "MacroDefinition", name, parameters, body, location:name.location }) %}
+      {% ([name,,parameters,,body]) => ({ type: "MacroDefinitionDirective", name, parameters, body, location:name.location }) %}
     | if_directive
 
 if_directive ->
@@ -116,7 +115,7 @@ if_directive ->
       ("ELSE" eol source_body {% at(2) %}):?
       "ENDIF"
       {% ([id,test,,body,elseifs,otherwise]) => ({
-            type: "IfClause",
+            type: "IfDirective",
             test, body,
             elseifs, otherwise,
             location:location(id)
@@ -126,7 +125,7 @@ define_section_directive ->
       "DEFSECT" expression "," section_type ("," section_attr {% at(1) %}):* ("AT" expression {% at(1) %}):?
       {% ([id,name,,datatype,attributes,at]) => {
           const blob = {
-                type: "DefineSection",               
+                type: "DefineSectionDirective",               
                 name, datatype, at,
                 location: location(id)
           }
@@ -224,7 +223,7 @@ top_level_expr ->
     | "#" expression {% at(1) %}
     | "*" {% ([id]) => ({ type:"InstructionLocation", location:location(id) }) %}
     | "[" expression "]" {% ([id,e,]) => ({ type:"IndirectMemory", address: e, location:location(id) }) %}
-    | %function_name "(" expression_list ")" {% ([name,_,parameters]) => ({ type:"FunctionCall", name:name.value, parameters, location: location(name)}) %}
+    | %function_name "(" expression_list:? ")" {% ([name,_,parameters]) => ({ type:"FunctionCall", name:name.value, parameters, location: location(name)}) %}
 
 # Atomic values
 symbol ->
