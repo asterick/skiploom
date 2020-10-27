@@ -19,7 +19,11 @@ function defines(... pairs) {
         const parser = expressionParser();
         try {
             parser.feed((typeof value != 'undefined') ? value : "1");
-            acc[key] = { type: 'define', value: parser.results };
+            acc[key] = {
+                type: 'define',
+                global: false,
+                value: parser.results
+            };
         } catch(e) {
             throw new Error(`Malformed define: ${define}`);
         }
@@ -28,53 +32,91 @@ function defines(... pairs) {
     }, {});
 }
 
+/*
+case "EndDirective":
+case "LabelDirective":
+case "DispatchDirective":
+case "SectionDirective":
+case "AlignDirective":
+case "DefineDirective":
+case "UndefineDirective":
+case "MessageDirective":
+case "WarningDirective":
+case "FailureDirective":
+case "IncludeDirective":
+case "RadixDirective":
+case "ExternDirective":
+case "EquateDirective":
+case "SetDirective":
+case "LocalDirective":
+case "GlobalDirective":
+case "NameDirective":
+case "AsciiBlockDirective":
+case "TerminatedAsciiBlockDirective":
+case "DataBytesDirective":
+case "DataWordsDirective":
+case "DataAllocateDirective":
+case "ExitMacroDirective":
+case "PurgeMacrosDirective":
+case "CountDupDirective":
+case "ListDupDirective":
+case "CharacterDupDirective":
+case "SequenceDupDirective":
+case "MacroDefinitionDirective":
+case "IfDirective":
+case "DefineSectionDirective":
+*/
+
 class AssemblerContext {
     constructor(name, parentNamespace) {
-        this.name = name
+        this.name = name;
+        this.radix = 10;
         this.namespace = Object.create(parentNamespace);
         this.blocks = [];
+    }
+
+    reduce(expression) {
+        console.log(expression);
     }
 
     async* pass1(ast) {
         for (let token of ast) {
             switch (token.type) {
+            //case "LabelDirective":
+            //case "DispatchDirective":
+            //case "SectionDirective":
+            //case "AlignDirective":
+            //case "DefineDirective":
+            //case "UndefineDirective":
+            //case "MessageDirective":
+            //case "WarningDirective":
+            //case "FailureDirective":
+            //case "IncludeDirective":
+            //case "RadixDirective":
             case "EndDirective":
                 // Prematurely end the assembly
                 return ;
-            case "LabelDirective":
-            case "DispatchDirective":
-            case "SectionDirective":
-            case "AlignDirective":
-            case "DefineDirective":
-            case "UndefineDirective":
-            case "MessageDirective":
-            case "WarningDirective":
-            case "FailureDirective":
-            case "IncludeDirective":
-            case "RadixDirective":
-            case "ExternDirective":
-            case "EquateDirective":
-            case "SetDirective":
-            case "LocalDirective":
-            case "GlobalDirective":
-            case "NameDirective":
-            case "AsciiBlockDirective":
-            case "TerminatedAsciiBlockDirective":
-            case "DataBytesDirective":
-            case "DataWordsDirective":
-            case "DataAllocateDirective":
+            //case "ExternDirective":
+            //case "EquateDirective":
+            //case "SetDirective":
+            //case "LocalDirective":
+            //case "GlobalDirective":
+            //case "NameDirective":
+            //case "AsciiBlockDirective":
+            //case "TerminatedAsciiBlockDirective":
+            //case "DataBytesDirective":
+            //case "DataWordsDirective":
+            //case "DataAllocateDirective":
             case "ExitMacroDirective":
-            case "PurgeMacrosDirective":
-            case "CountDupDirective":
-            case "ListDupDirective":
-            case "CharacterDupDirective":
-            case "SequenceDupDirective":
-            case "MacroDefinitionDirective":
-            case "IfDirective":
-            case "DefineSectionDirective":
-                console.error(`PLEASE IMPLEMENT: ${token.type}`);
-                yield token;
-                break ;
+                throw Error("Misplaced EXITM, Must be used inside of a macro");
+            //case "PurgeMacrosDirective":
+            //case "CountDupDirective":
+            //case "ListDupDirective":
+            //case "CharacterDupDirective":
+            //case "SequenceDupDirective":
+            //case "MacroDefinitionDirective":
+            //case "IfDirective":
+            //case "DefineSectionDirective":
             default:
                 console.error(token);
                 throw Error(`Unhandled directive ${token.type}`);
