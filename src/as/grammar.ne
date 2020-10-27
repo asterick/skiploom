@@ -58,7 +58,7 @@ source_line ->
       label:? directive:? eol
 
 label ->
-      symbol %colon {% ([name]) => ({ type: "Label", name, location:location(name) }) %}
+      symbol %colon {% ([name]) => ({ type: "LabelDirective", name, location:location(name) }) %}
 
 eol ->
       %comment:? %linefeed {% ignore %}
@@ -171,6 +171,8 @@ symbol_list ->
 # Expressions
 expression ->
       logical_or_expr {% id %}
+    | "#" logical_or_expr {% ([id, value]) => ({ type:"Immediate", value, location:location(id) }) %} )
+    | "[" logical_or_expr "]" {% ([id, address,]) => ({ type:"IndirectMemory", address, location:location(id) }) %}
 
 logical_or_expr ->
       logical_and_expr {% id %}
@@ -235,10 +237,8 @@ top_level_expr ->
       number {% id %}
     | symbol {% id %}
     | string {% id %}
-    | "(" expression ")" {% at(1) %}
-    | "#" expression {% at(1) %}
+    | "(" logical_or_expr ")" {% at(1) %}
     | "*" {% ([id]) => ({ type:"InstructionLocation", location:location(id) }) %}
-    | "[" expression "]" {% ([id,e,]) => ({ type:"IndirectMemory", address: e, location:location(id) }) %}
     | %function_name "(" expression_list:? ")" {% ([name,_,parameters]) => ({ type:"FunctionCall", name:name.value, parameters, location: location(name)}) %}
 
 # Atomic values
