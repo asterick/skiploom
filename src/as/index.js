@@ -1,3 +1,4 @@
+const deepcopy = require("../util/deepcopy.js");
 const { resolve } = require("../util/resolve.js");
 const { expressionParser, sourceParser } = require("./parsers.js");
 
@@ -33,7 +34,6 @@ function defines(... pairs) {
 }
 
 /*
-case "EndDirective":
 case "LabelDirective":
 case "DispatchDirective":
 case "SectionDirective":
@@ -45,6 +45,7 @@ case "WarningDirective":
 case "FailureDirective":
 case "IncludeDirective":
 case "RadixDirective":
+case "EndDirective":
 case "ExternDirective":
 case "EquateDirective":
 case "SetDirective":
@@ -70,13 +71,19 @@ case "DefineSectionDirective":
 class AssemblerContext {
     constructor(name, parentNamespace) {
         this.name = name;
+
         this.radix = 10;
-        this.namespace = Object.create(parentNamespace);
+        this.variables = Object.create(parentNamespace);
+        this.macros = {};
         this.blocks = [];
     }
 
     reduce(expression) {
         console.log(expression);
+    }
+
+    evaluate() {
+
     }
 
     async* pass1(ast) {
