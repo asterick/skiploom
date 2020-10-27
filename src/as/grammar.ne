@@ -1,5 +1,5 @@
-@{% 
-const lexer = require("./lexer.js"); 
+@{%
+const lexer = require("./lexer.js");
 const UnaryOperations = {
       "^": "MacroLocalConcat",
       "!": "LogicalNot",
@@ -35,7 +35,7 @@ const BinaryOperations = {
 function at(index) { return (data) => data[index] }
 function ignore() { return null }
 function location({ line, col }) {
-      return { line, col }
+      return { line, col, source: global.parseSource }
 }
 
 function unary([op, value]) {
@@ -103,13 +103,13 @@ directive ->
 
     | "EXITM" {% ([id]) => ({ type: "ExitMacroDirective", location:location(id) }) %}
     | "PMACRO" symbol_list {% ([id,names]) => ({ type: "PurgeMacrosDirective", names, location:location(id) }) %}
-    | "DUP" expression eol source_body "ENDM" 
+    | "DUP" expression eol source_body "ENDM"
       {% ([id,count,,body]) => ({ type: "CountDupDirective", count, body, location:location(id) }) %}
     | "DUPA" symbol "," expression_list eol source_body "ENDM"
       {% ([id,variable,,list,,body]) => ({ type: "ListDupDirective", variable, list, body, location:location(id) }) %}
-    | "DUPC" symbol "," expression eol source_body "ENDM" 
+    | "DUPC" symbol "," expression eol source_body "ENDM"
       {% ([id,variable,,string,,body]) => ({ type: "CharacterDupDirective", variable, string, body, location:location(id) }) %}
-    | "DUPF" symbol ("," expression  {% at(1) %}):? "," expression ("," expression {% at(1) %}):? eol source_body "ENDM" 
+    | "DUPF" symbol ("," expression  {% at(1) %}):? "," expression ("," expression {% at(1) %}):? eol source_body "ENDM"
       {% ([id,variable,start,,end,step,,body]) => ({ type: "SequenceDupDirective", variable, start, end, step, body, location:location(id) }) %}
     | symbol "MACRO" symbol_list eol source_body "ENDM"
       {% ([name,,parameters,,body]) => ({ type: "MacroDefinitionDirective", name, parameters, body, location:name.location }) %}
@@ -130,7 +130,7 @@ if_directive ->
 define_section_directive ->
       "DEFSECT" expression "," section_type ("," section_attr {% at(1) %}):* ("AT" expression {% at(1) %}):?
       {% ([id,name,,datatype,attributes,at]) => Object.assign({
-                type: "DefineSectionDirective",               
+                type: "DefineSectionDirective",
                 name, datatype, at,
                 location: location(id)
           }, ...attributes)

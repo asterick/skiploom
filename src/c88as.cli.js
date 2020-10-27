@@ -1,25 +1,28 @@
 #!/usr/bin/env node
-const yargs = require('yargs/yargs');
+const { ArgumentParser } = require('argparse');
 
 const { searchPaths, resolve } = require( "./util/resolve");
-const assemble = require("./as");
+const { defines, assemble } = require("./as");
 
-const argv = yargs(process.argv.slice(2))
-    .usage('Usage: $0 [options] ... files')
-    .help('h')
-    .version(require('../package.json').version)
-    .default('I', [], "Include search path")
-    .argv
-    ;
+const parser = new ArgumentParser({
+    description: 'S1C88 Assembler and Linker',
+    add_help: true
+});
+
+parser.add_argument('-v', '--version', { action: 'version', version: require("../package.json").version });
+parser.add_argument('-I', '--include', { action: 'append', help: "Add include to search path" });
+parser.add_argument('-D', '--define', { action: 'append', help: "Define symbol" });
+parser.add_argument('-o', '--output', { help: "Output filename" })
+parser.add_argument('files', { metavar:'file', nargs:'+', help: 'Files to bundle' })
+
+const argv = parser.parse_args();
 
 // Search paths should include supplied paths, and the current working directory (highest priority)
-searchPaths.unshift(process.cwd(), ... argv.I);
+searchPaths.unshift(process.cwd(), ...argv.include);
 
 // Process our files
 async function main() {
-    for (let fn of argv._) {
-        await assemble(fn);
-    }
+    console.log(await assemble(argv));
 }
 
 main();

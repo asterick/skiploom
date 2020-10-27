@@ -27,8 +27,8 @@
   },
   "homepage": "https://github.com/asterick/s1c88-toolchain#readme",
   "dependencies": {
+    "argparse": "^2.0.1",
     "moo": "^0.5.1",
-    "nearley": "^2.19.7",
-    "yargs": "^16.1.0"
+    "nearley": "^2.19.7"
   }
 }
