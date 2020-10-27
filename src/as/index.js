@@ -16,107 +16,109 @@ function defines(... pairs) {
             path: key
         }
 
-        if (typeof value != 'undefined') {
-            try {
-                const parser = expressionParser();
-                parser.feed(value);
-                acc[key] = { type: 'define', value: parser.results };
-            } catch(e) {
-                throw new Error(`Malformed define: ${value}`);
-            }
-        } else {
-            acc[key] = { type: 'define', value: { type: 'Number', value: 1 } };
+        const parser = expressionParser();
+        try {
+            parser.feed((typeof value != 'undefined') ? value : "1");
+            acc[key] = { type: 'define', value: parser.results };
+        } catch(e) {
+            throw new Error(`Malformed define: ${define}`);
         }
 
         return acc;
     }, {});
 }
 
-async function* assemblePass1(namespace, ast) {
-    for (let token of ast) {
-        switch (token.type) {
-        case "LabelDirective":
-        case "DispatchDirective":
-        case "SectionDirective":
-        case "AlignDirective":
-        case "DefineDirective":
-        case "UndefineDirective":
-        case "MessageDirective":
-        case "WarningDirective":
-        case "FailureDirective":
-        case "IncludeDirective":
-        case "RadixDirective":
-        case "EndDirective":
-        case "ExternDirective":
-        case "EquateDirective":
-        case "SetDirective":
-        case "LocalDirective":
-        case "GlobalDirective":
-        case "NameDirective":
-        case "AsciiBlockDirective":
-        case "TerminatedAsciiBlockDirective":
-        case "DataBytesDirective":
-        case "DataWordsDirective":
-        case "DataAllocateDirective":
-        case "ExitMacroDirective":
-        case "PurgeMacrosDirective":
-        case "CountDupDirective":
-        case "ListDupDirective":
-        case "CharacterDupDirective":
-        case "SequenceDupDirective":
-        case "MacroDefinitionDirective":
-        case "IfDirective":
-        case "DefineSectionDirective":
-            break ;
-        default:
-            console.error(token);
-            throw Error(`Unhandled directive ${token.type}`);
+class AssemblerContext {
+    constructor(name, parentNamespace) {
+        this.name = name
+        this.namespace = Object.create(parentNamespace);
+        this.blocks = [];
+    }
+
+    async* pass1(ast) {
+        for (let token of ast) {
+            switch (token.type) {
+            case "EndDirective":
+                // Prematurely end the assembly
+                return ;
+            case "LabelDirective":
+            case "DispatchDirective":
+            case "SectionDirective":
+            case "AlignDirective":
+            case "DefineDirective":
+            case "UndefineDirective":
+            case "MessageDirective":
+            case "WarningDirective":
+            case "FailureDirective":
+            case "IncludeDirective":
+            case "RadixDirective":
+            case "ExternDirective":
+            case "EquateDirective":
+            case "SetDirective":
+            case "LocalDirective":
+            case "GlobalDirective":
+            case "NameDirective":
+            case "AsciiBlockDirective":
+            case "TerminatedAsciiBlockDirective":
+            case "DataBytesDirective":
+            case "DataWordsDirective":
+            case "DataAllocateDirective":
+            case "ExitMacroDirective":
+            case "PurgeMacrosDirective":
+            case "CountDupDirective":
+            case "ListDupDirective":
+            case "CharacterDupDirective":
+            case "SequenceDupDirective":
+            case "MacroDefinitionDirective":
+            case "IfDirective":
+            case "DefineSectionDirective":
+                console.error(`PLEASE IMPLEMENT: ${token.type}`);
+                yield token;
+                break ;
+            default:
+                console.error(token);
+                throw Error(`Unhandled directive ${token.type}`);
+            }
         }
-        yield token;
+    }
+
+    async assemble(path, loader = 'text.loader.js') {
+        // Isolate our namespace
+        global.parserSource = {
+            source: loader,
+            includedFrom: global.parserSource,
+            path
+        }
+
+        // Import our source transform
+        loader = require(await resolve(loader));
+
+        // Parse our sourcecode
+        const parser = sourceParser();
+        for await (let chunk of loader(path)) {
+            parser.feed(chunk);
+        }
+        parser.feed("\n");
+
+        for await (let block of this.pass1(parser.results[0])) {
+            console.log(block);
+            this.blocks.push(block);
+        }
+
+        global.parserSource = global.parserSource.includedFrom;
     }
 }
 
-async function* assembleFile(namespace, path, loader = 'text.loader.js') {
-    // Isolate our namespace
-    namespace = Object.create(namespace);
-
-    global.parserSource = {
-        source: loader,
-        includedFrom: global.parserSource,
-        path
-    }
-
-    // Import our source transform
-    loader = require(await resolve(loader));
-
-    // Parse our sourcecode
-    const parser = sourceParser();
-    for await (let chunk of loader(path)) {
-        parser.feed(chunk);
-    }
-    parser.feed("\n");
-
-    yield* assemblePass1(namespace, parser.results[0]);
-
-    global.parserSource = global.parserSource.includedFrom;
-}
-
-async function assemble({ files, define }) {
-    // Pull in our command line parameters
+async function* assemble({ files, define }) {
     const namespace = defines(... define);
-
     // Set our include source as the command-line
     global.parseSource = { source: "command-line" }
 
-    // Package our units
-    let bundle = [];
     for (let fn of files) {
-        for await (let token of assembleFile(namespace, fn)) {
-            bundle.push(token)
-        }
+        const ctx = new AssemblerContext(fn, namespace);
+        await ctx.assemble(fn);
+        yield ctx;
     }
-
-    return bundle;
 }
 
 module.exports = {

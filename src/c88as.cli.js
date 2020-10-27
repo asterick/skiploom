@@ -22,7 +22,9 @@ searchPaths.unshift(process.cwd(), ...argv.include);
 
 // Process our files
 async function main() {
-    console.log(await assemble(argv));
+    for await (let object of assemble(argv)) {
+        // console.dir(object);
+    }
 }
 
 main();
