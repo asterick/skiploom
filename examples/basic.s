@@ -2,7 +2,7 @@
 $CASE ON
 $MODEL S
 
-        NAME    "MAIN"
+        NAME    "BASIC"
         SYMB    TOOL, "E0C88 compiler v1.2", 1
         SYMB    TYPE, 256, "bit", 'g', 0, 1
         GLOBAL  _main
