@@ -21,7 +21,8 @@ function defines(... pairs) {
         try {
             parser.feed((typeof value != 'undefined') ? value : "1");
             acc[key] = {
-                type: 'define',
+                frozen: true,
+                define: true,
                 export: false,
                 value: parser.results
             };
@@ -101,6 +102,61 @@ class Message {
     }
 }
 
+class Scope {
+    constructor (globals, top = null) {
+        this.globals = globals;
+        this.top = top || Object.create(globals);
+    }
+
+    scope () {
+        return new Scope(this.globals, Object.create(this.top));
+    }
+
+    local(name) {
+        if (this.globals.hasOwnProperty(name)) {
+            throw `Global ${name} is already defined`;
+        } else if (!this.top.hasOwnProperty(name)) {
+            // Empty local container
+            this.top[name] = { };
+        }
+
+        return this.top[name];
+    }
+
+    global(name) {
+        if (this.top[name]) {
+            if (this.top[name] != this.globals[name]) {
+                throw `Local of name ${name} already exists`;
+            }
+        } else {
+            // Create container for variable
+            this.globals[name] = { frozen: true };
+        }
+
+        return this.top[name];
+    }
+
+    get(name) {
+        return this.top[name];
+    }
+
+    remove(name) {
+        let tree = this.top;
+
+        do {
+            if (tree.hasOwnProperty(name)) {
+                delete tree[name];
+            }
+
+            tree = Object.getPrototypeOf(tree);
+        } while (tree != Object.prototype);
+    }
+
+    toString() {
+        return JSON.stringify(this.top);
+    }
+}
+
 class AssemblerContext {
     constructor(name, globals) {
         this.name = name;
@@ -113,36 +169,13 @@ class AssemblerContext {
     /*
      * Helper functions
      */
-    local(name, scope) {
-        if (this.globals.hasOwnProperty(name)) {
-            throw `Global ${name} is already defined`;
-        } else if (!scope.hasOwnProperty(name)) {
-            // Empty local container
-            scope[name] = { };
-        }
-
-        return scope[name];
-    }
-
-    global(name, scope) {
-        if (scope[name]) {
-            if (scope[name] != this.globals[name]) {
-                throw `Local of name ${name} already exists`;
-            }
-        } else {
-            // Create container for variable
-            this.globals[name] = { frozen: true };
-        }
-
-        return scope[name];
-    }
 
     /*
      * Expression evaluation
      */
-    evaluate(ast, scope) {
+    evaluate(ast, scope, guard = []) {
         switch (ast.type) {
-        case "Pending":
+        case "String":
             return ast;
 
         case "Number":
@@ -158,17 +191,22 @@ class AssemblerContext {
 
         case "Identifier":
             {
-                const variable = scope[ast.name] || this.local(ast.name, scope);
+                // Detect circular reference
+                if (guard.indexOf(ast.name) >= 0) {
+                    throw new Message(LEVEL_ERROR, ast.location, `Circular referece ${guard.join("->")}->${ast.name}`);
+                }
+
+                const variable = scope.get(ast.name) || scope.local(ast.name);
                 variable.used = true;
 
+                // Implied forward decl
                 if (!variable.value) {
-                    variable.value = { type: "Pending", deferred: true, name: ast.name };
                     variable.frozen = true;
-                    return variable.value;
+                    return ast;
                 }
 
                 // Bubble up name (deferred values are implicitly named)
-                return { name:ast.name, ... this.evaluate(scope[ast.name].value, scope) };
+                return { name:ast.name, ... this.evaluate(scope.get(ast.name).value, scope, guard.concat(ast.name)) };
             }
 
         default:
@@ -185,33 +223,51 @@ class AssemblerContext {
         // Attempt to resolve name
         let condensed = this.evaluate(ast, scope);
         if (!condensed.name) {
-            throw "Expression does not evaluate with a name";
+            throw new Message(LEVEL_ERROR, ast.location, "Expression does not evaluate with a name");
         }
 
         return condensed.name;
+    }
+
+    evaluate_string(ast, scope) {
+        let condensed = this.evaluate(ast, scope, [], true);
+
+        if (condensed.type == "String") {
+            return condensed.value;
+        } else if (condensed.type == "Number") {
+            return condensed.value.toString();
+        } else {
+            throw new Message(LEVEL_ERROR, ast.location, "Expression does not evaluate to a string");
+        }
     }
 
     /*
      * First pass assembler
      */
     async* pass1(ast, scope) {
+        scope = scope.scope();
+
         for (let token of ast) {
             try {
                 switch (token.type) {
+                // Assembly flow control
+                case "EndDirective":
+                    return ;
+
                 // Variable Directives
                 case "LocalDirective":
                     for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
-                        this.local(name, scope).location = token.location;
+                        scope.local(name).location = token.location;
                     }
                     break ;
                 case "GlobalDirective":
                     for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
-                        this.global(name, scope).location = token.location;
+                        scope.global(name).location = token.location;
                     }
                     break ;
                 case "ExternDirective":
                     for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
-                        const variable = this.global(name, scope);
+                        const variable = scope.global(name);
                         variable.location = token.locaiton;
 
                         for (const attr in token.attributes) {
@@ -228,10 +284,10 @@ class AssemblerContext {
                 case "SetDirective":
                     {
                         const name = this.evaluate_name(token.name, scope);
-                        const variable = scope[name] || this.local(name, scope);
+                        const variable = scope.get(name) || scope.local(name);
 
                         if (variable.frozen) {
-                            yield new Message(LEVEL_ERROR, token.location, `Cannot set frozen value ${name}`)
+                            throw new Message(LEVEL_ERROR, token.location, `Cannot set frozen value ${name}`)
                         }
 
                         Object.assign(variable, {
@@ -244,23 +300,16 @@ class AssemblerContext {
                 case "EquateDirective":
                     {
                         const name = this.evaluate_name(token.name, scope);
-                        const variable = scope[name] || this.global(name, scope);
+                        const variable = scope.get(name) || scope.global(name);
                         const value = this.evaluate(token.value, scope);
 
                         if (variable.value) {
-                            if (variable.value.deferred) {
-                                Object.assign(variable.value, value);
-                                variable.value.deferred = false;
-                            } else {
-                                yield new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
-                                break ;
-                            }
-                        } else {
-                            variable.value = value;
+                            throw new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
                         }
 
                         // Assign our value
                         Object.assign(variable, {
+                            value,
                             location: token.location,
                             frozen: true
                         });
@@ -270,7 +319,7 @@ class AssemblerContext {
                 case "LabelDirective":
                     {
                         const name = this.evaluate_name(token.name, scope);
-                        const variable = scope[name] || this.local(name, scope);
+                        const variable = scope.get(name) || scope.local(name);
                         const value = {
                             type: "Fragment",
                             location: token.location,
@@ -278,19 +327,12 @@ class AssemblerContext {
                         };
 
                         if (variable.value) {
-                            if (variable.value.deferred) {
-                                Object.assign(variable.value, value);
-                                variable.value.deferred = false;
-                            } else {
-                                yield new Message(LEVEL_ERROR, token.location, `Cannot define label ${name}`);
-                                break ;
-                            }
-                        } else {
-                            variable.value = value;
+                            throw new Message(LEVEL_ERROR, token.location, `Cannot define label ${name}`);
                         }
 
                         // Assign our value
                         Object.assign(variable, {
+                            value,
                             location: token.location,
                             frozen: true
                         });
@@ -299,26 +341,63 @@ class AssemblerContext {
                     }
                     break ;
 
+                case "DefineDirective":
+                    {
+                        const name = this.evaluate_name(token.name, scope);
+                        const variable = scope.get(name) || scope.global(name);
+
+                        if (variable.value) {
+                            throw new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
+                        } else if (variable.used) {
+                            throw new Message(LEVEL_ERROR, token.location, `Defines may not be deferred ${name}`);
+                        }
+
+                        // Assign our value
+                        Object.assign(variable, {
+                            location: token.location,
+                            frozen: true,
+                            value: token.value,
+                            define: true
+                        });
+                    }
+                    break ;
+
+                case "UndefineDirective":
+                    {
+                        for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
+                            const variable = scope.get(name);
+
+                            // Warn on undefined values
+                            if (!variable || !variable.define) {
+                                yield new Message(LEVEL_WARN, token.location, `No definition named ${name}`);
+                                continue ;
+                            }
+
+                            // Delete reference
+                            scope.remove(name);
+                        }
+                    }
+                    break ;
+
+                // Display directives
+                //case "MessageDirective":
+                case "WarningDirective":
+                    yield new Message(LEVEL_WARN, token.location, token.message.map((exp) => this.evaluate_string(exp, scope)).join(" "));
+                    break ;
+                //case "FailureDirective":
+
                 // Macro Directives
                 //case "MacroDefinitionDirective":
                 //case "PurgeMacrosDirective":
                 case "ExitMacroDirective":
-                    yield new Message(LEVEL_ERROR, ast.location, "Misplaced EXITM, Must be used inside of a macro");
+                    yield new Message(LEVEL_ERROR, token.location, "Misplaced EXITM, Must be used inside of a macro");
                     break ;
 
                 //case "DispatchDirective":
                 //case "SectionDirective":
                 //case "AlignDirective":
-                //case "DefineDirective":
-                //case "UndefineDirective":
-                //case "MessageDirective":
-                //case "WarningDirective":
-                //case "FailureDirective":
                 //case "IncludeDirective":
                 //case "RadixDirective":
-                case "EndDirective":
-                    // Prematurely end the assembly
-                    return ;
                 //case "NameDirective":
                 //case "AsciiBlockDirective":
                 //case "TerminatedAsciiBlockDirective":
@@ -346,21 +425,22 @@ class AssemblerContext {
             }
         }
 
-        for (const name in scope) {
-            if (!scope.hasOwnProperty(name)) {
+        // TODO: RERUN EVALUATIONS AFTER WE'VE FINISHED WITH THIS SCOPE (forward deferred)
+
+        for (const name in scope.top) {
+            if (!scope.top.hasOwnProperty(name)) {
                 continue ;
             }
 
-            const variable = scope[name];
-            const undefined_var = !variable.value || variable.value.deferred;
+            const variable = scope.get(name);
 
             if (!variable.used) {
-                if (undefined_var) {
+                if (!variable.value) {
                     yield new Message(LEVEL_WARN, variable.location, `Unused identifier ${name}`);
                 } else {
                     yield new Message(LEVEL_WARN, variable.location, `Local variable ${name} is defined, but is never used`);
                 }
-            } else if (undefined_var) {
+            } else if (!variable.value) {
                 yield new Message(LEVEL_ERROR, variable.location, `Local variable ${name} is used, but is never defined`);
             }
         }
@@ -402,12 +482,14 @@ class AssemblerContext {
 }
 
 async function* assemble({ files, define }) {
-    // Set our include source as the command-line
     const globals = defines(... define);
 
     for (let fn of files) {
+        // Create a new variable scope (protect globals)
+        const scope = new Scope({ ... globals });
+
         global.parseSource = { source: "file", fn }
-        const ctx = new AssemblerContext(fn, globals);
+        const ctx = new AssemblerContext(fn, scope);
         await ctx.assemble(fn);
         yield ctx;
     }
