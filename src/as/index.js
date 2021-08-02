@@ -1,4 +1,3 @@
-const deepcopy = require("../util/deepcopy.js");
 const { resolve } = require("../util/resolve.js");
 const { expressionParser, sourceParser } = require("./parsers.js");
 
@@ -222,7 +221,6 @@ class AssemblerContext {
                 if (defer) {
                     this.incomplete.push(value);
                 } else {
-                    console.log(ast);
                     throw new Message(LEVEL_FAIL, ast.location, "Cannot defer evaluation for this statement");
                 }
                 break ;
@@ -448,7 +446,6 @@ class AssemblerContext {
             } catch(msg) {
                 if (msg instanceof Message) {
                     yield msg;
-                    if (msg.level == LEVEL_FATAL) return ;
                 } else if(msg instanceof Error) {
                     throw msg;
                 } else {
@@ -475,6 +472,19 @@ class AssemblerContext {
                 yield new Message(LEVEL_FAIL, variable.location, `Local variable ${name} is used, but is never defined`);
             }
         }
+    }
+
+    async* defer_evaluate(pass, scope) {
+        let blocks = [];
+
+        for await (let block of pass) {
+            if (block instanceof Message) {
+                yield block;
+                continue ;
+            }
+
+            blocks.push(block);
+        }
 
         // Reevaluate local deferred
         let exp;
@@ -491,6 +501,10 @@ class AssemblerContext {
                     yield new Message(LEVEL_FAIL, token.location, msg);
                 }
             }
+        }
+
+        for (let block of blocks) {
+            yield block;
         }
     }
 
@@ -513,16 +527,17 @@ class AssemblerContext {
         parser.feed("\n");
 
         // Start with first pass assembler
-        let blocks = [];
-        for await (let block of this.pass1(parser.results[0], scope)) {
+        const ast = parser.results[0];
+        for await (let block of this.defer_evaluate(this.pass1(ast, scope), scope)) {
             // Emitted a log message
             if (block instanceof Message) {
                 console.log(block.toString());
+                if (block.level == LEVEL_FATAL) return ;
                 continue ;
             }
 
             // This is for a future pass
-            blocks.push(block);
+            console.log(block);
         }
 
         global.parserSource = global.parserSource.includedFrom;
