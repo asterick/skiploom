@@ -241,48 +241,18 @@ class AssemblerContext {
                     }
                     break ;
 
-                    case "EquateDirective":
-                        {
-                            const name = this.evaluate_name(token.name, scope);
-                            const variable = scope[name] || this.global(name, scope);
-                            const value = this.evaluate(token.value, scope);
-
-                            if (variable.value) {
-                                if (variable.value.deferred) {
-                                    Object.assign(variable.value, value);
-                                    variable.value.deferred = false;
-                                } else {
-                                    yield new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
-                                    break ;
-                                }
-                            } else {
-                                variable.value = value;
-                            }
-
-                            // Assign our value
-                            Object.assign(variable, {
-                                location: token.location,
-                                frozen: true
-                            });
-                        }
-                        break ;
-
-                    case "LabelDirective":
+                case "EquateDirective":
                     {
                         const name = this.evaluate_name(token.name, scope);
-                        const variable = scope[name] || this.local(name, scope);
-                        const value = {
-                            type: "Fragment",
-                            location: token.location,
-                            id: uuid()
-                        };
+                        const variable = scope[name] || this.global(name, scope);
+                        const value = this.evaluate(token.value, scope);
 
                         if (variable.value) {
                             if (variable.value.deferred) {
                                 Object.assign(variable.value, value);
                                 variable.value.deferred = false;
                             } else {
-                                yield new Message(LEVEL_ERROR, token.location, `Cannot define label ${name}`);
+                                yield new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
                                 break ;
                             }
                         } else {
@@ -294,10 +264,40 @@ class AssemblerContext {
                             location: token.location,
                             frozen: true
                         });
-
-                        yield variable.value;
                     }
                     break ;
+
+                case "LabelDirective":
+                {
+                    const name = this.evaluate_name(token.name, scope);
+                    const variable = scope[name] || this.local(name, scope);
+                    const value = {
+                        type: "Fragment",
+                        location: token.location,
+                        id: uuid()
+                    };
+
+                    if (variable.value) {
+                        if (variable.value.deferred) {
+                            Object.assign(variable.value, value);
+                            variable.value.deferred = false;
+                        } else {
+                            yield new Message(LEVEL_ERROR, token.location, `Cannot define label ${name}`);
+                            break ;
+                        }
+                    } else {
+                        variable.value = value;
+                    }
+
+                    // Assign our value
+                    Object.assign(variable, {
+                        location: token.location,
+                        frozen: true
+                    });
+
+                    yield variable.value;
+                }
+                break ;
 
                 // Macro Directives
                 //case "MacroDefinitionDirective":
