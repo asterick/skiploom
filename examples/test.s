@@ -1,6 +1,7 @@
     LOCAL Z
-    Z SET 0FFh
-    EXTERN (CODE, SHORT) TEMP
+    X SET 100
+    Y EQU 0FEh
+    EXTERN (code, SHORT) TEMP
 
 TEST_M MACRO A, B, C, D
     LD A, I\A

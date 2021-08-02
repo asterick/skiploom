@@ -110,21 +110,36 @@ class AssemblerContext {
      */
     evaluate(ast, scope) {
         switch (ast.type) {
+        case "Number":
+            if (typeof ast.value == "number") {
+                return ast;
+            } else if (typeof ast.value == "string") {
+                const copy = { ... ast };
+                copy.value = parseInt(ast.value, this.radix);
+                return copy;
+            } else {
+                throw `Invalid number value: ${ast.value}`
+            }
         case "Identifier":
             if (scope[ast.name]) {
-                return { name:ast.name, ... scope[ast.name] };
+                return { name: ast.name, ... scope[ast.name] };
             }
             return ast;
         default:
-            throw new Error(`Unknown expression type: ${ast.type}`);
+            throw `Unknown expression type: ${ast.type}`;
         }
     }
 
     evaluate_name(ast, scope) {
-        let condensed = this.evaluate(ast, scope);
+        // Short cut evaluate
+        if (ast.name) {
+            return ast.name;
+        }
 
+        // Attempt to resolve name
+        let condensed = this.evaluate(ast, scope);
         if (!condensed.name) {
-            throw new Error("Expression does not evaluate with a name");
+            throw "Expression does not evaluate with a name";
         }
 
         return condensed.name;
@@ -167,14 +182,14 @@ class AssemblerContext {
                 // Variable Directives
                 case "LocalDirective":
                     for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
-                        this.local(name, scope);
+                        this.local(name, scope) = token.location;
                     }
 
                     break ;
 
                 case "GlobalDirective":
                     for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
-                        this.global(name, scope);
+                        this.global(name, scope).location = token.location;
                     }
 
                     break ;
@@ -182,6 +197,7 @@ class AssemblerContext {
                 case "ExternDirective":
                     for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
                         const variable = this.global(name, scope);
+                        variable.location = token.locaiton;
 
                         for (const attr in token.attributes) {
                             if (variable[attr] && variable[attr] != token.attributes[attr]) {
@@ -194,8 +210,38 @@ class AssemblerContext {
                     }
                     break ;
 
-                //case "EquateDirective":
-                //case "SetDirective":
+                case "EquateDirective":
+                    {
+                        const name = this.evaluate_name(token.name, scope);
+                        const variable = scope[name] || this.global(name, scope);
+
+                        const value = this.evaluate(token.value);
+
+                        if (variable.value) {
+                            yield new Message(LEVEL_ERROR, ast.location, `Cannot change frozen value ${NAME}`);
+                            break ;
+                        }
+
+                        // Can only be set once
+                        variable.frozen = true;
+                        variable.value = value;
+                        variable.location = token.location;
+                    }
+                    break ;
+                case "SetDirective":
+                    {
+                        const name = this.evaluate_name(token.name, scope);
+                        const variable = scope[name] || this.local(name, scope);
+                        const value = this.evaluate(token.value);
+
+                        if (variable.value && variable.frozen) {
+                            yield new Message(LEVEL_ERROR, ast.location, `Cannot change frozen value ${NAME}`)
+                        }
+
+                        variable.value = value;
+                        variable.location = token.location;
+                    }
+                    break ;
 
                 // Macro Directives
                 //case "MacroDefinitionDirective":
@@ -236,6 +282,24 @@ class AssemblerContext {
                 }
             } catch(msg) {
                 yield new Message(LEVEL_ERROR, token.location, msg);
+            }
+        }
+
+        for (const name in scope) {
+            if (!scope.hasOwnProperty(name)) {
+                continue ;
+            }
+
+            const variable = scope[name];
+
+            if (!variable.used) {
+                if (variable.value) {
+                    yield new Message(LEVEL_WARN, variable.location, `Local variable ${name} is defined, but is never used`);
+                } else {
+                    yield new Message(LEVEL_WARN, variable.location, `Unused identifier ${name}`);
+                }
+            } else if (!variable.value) {
+                yield new Message(LEVEL_ERROR, variable.location, `Local variable ${name} is used, but is never defined`);
             }
         }
     }

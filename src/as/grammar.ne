@@ -90,8 +90,8 @@ directive ->
                 attributes: Object.assign({}, ... attributes)
           })
       %}
-    | symbol "EQU" expression {% ([name, value]) => ({ type: "EquateDirective", name, value, location:name.location }) %}
-    | symbol "SET" expression {% ([name, value]) => ({ type: "SetDirective", name, value, location:name.location }) %}
+    | symbol "EQU" expression {% ([name, _, value]) => ({ type: "EquateDirective", name, value, location:name.location }) %}
+    | symbol "SET" expression {% ([name, _, value]) => ({ type: "SetDirective", name, value, location:name.location }) %}
     | "LOCAL" symbol_list {% ([id, names]) => ({ type: "LocalDirective", names, location:location(id) }) %}
     | "GLOBAL" symbol_list {% ([id, names]) => ({ type: "GlobalDirective", names, location:location(id) }) %}
     | "NAME" expression {% ([id, name]) => ({ type: "NameDirective", name, location:location(id) }) %}

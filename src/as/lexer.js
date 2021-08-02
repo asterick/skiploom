@@ -12,7 +12,7 @@ function filter_whitespace(lexer) {
         for (;;) {
             let token = old.apply(lexer, args);
             switch ((token || {}).type) {
-                case 'ws': 
+                case 'ws':
                     continue ;
                 case 'identifer':
                 case 'reserved':
@@ -37,6 +37,7 @@ function escape(text) {
 const keywords = {
     reserved: [
         // Reserved words
+        "CODE", "DATA", "SHORT", "LONG",
         "CALLS","SYMB","ALIGN","COMMENT","DEFINE","DEFSECT","END","FAIL","INCLUDE",
         "MSG","RADIX","SECT","UNDEF","WARN","EQU","EXTERN","GLOBAL","LOCAL","NAME",
         "SET","ASCII","ASCIZ","DB","DS","DW","DUP","DUPA","DUPC","DUPF","ENDIF",
@@ -61,7 +62,7 @@ const lexer = moo.compile({
     },
     number: [
         { match: /[0-9][0-9a-fA-F]*[hH]/, value: (v) => parseInt(v, 16) },
-        { match: /[0-9]+[dD]?/, value: (v) => parseInt(v, 10) },
+        { match: /[0-9]+[dD]/, value: (v) => parseInt(v, 10) },
         { match: /[0-7]+[oO]/, value: (v) => parseInt(v, 8) },
         { match: /[01]+[bB]/, value: (v) => parseInt(v, 2) },
         /[0-9][0-9a-fA-F]*/
@@ -79,7 +80,7 @@ const lexer = moo.compile({
         "\\", "\\?", "\\%",
         "<<", ">>",
         "!=", "==", ">=", "<=", ">", "<",
-        "&&", "||", "&", "|", "^", "~", "!", 
+        "&&", "||", "&", "|", "^", "~", "!",
         "+", "-",
         "/", "*", "%",
         "#", ".."
