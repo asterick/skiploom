@@ -22,7 +22,7 @@ function defines(... pairs) {
             parser.feed((typeof value != 'undefined') ? value : "1");
             acc[key] = {
                 type: 'define',
-                global: false,
+                export: false,
                 value: parser.results
             };
         } catch(e) {
@@ -118,15 +118,27 @@ class AssemblerContext {
                 copy.value = parseInt(ast.value, this.radix);
                 return copy;
             } else {
-                throw `Invalid number value: ${ast.value}`
+                throw new Message(LEVEL_ERROR, ast.location, `Invalid number value: ${ast.value}`);
             }
+
         case "Identifier":
             if (scope[ast.name]) {
-                return { name: ast.name, ... scope[ast.name] };
+                const variable = scope[ast.name];
+                variable.used = true;
+                const value = this.evaluate(variable.value, scope);
+
+                // Carry the name down
+                if (!value.name) {
+                    value.name = ast.name
+                }
+
+                return value;
+            } else {
+                throw new Message(LEVEL_ERROR, ast.location, `Reference to undeclared identifier ${ast.name}`);
             }
-            return ast;
+
         default:
-            throw `Unknown expression type: ${ast.type}`;
+            throw new Message(LEVEL_ERROR, ast.location, `Unknown expression type: ${ast.type}`);
         }
     }
 
@@ -182,7 +194,7 @@ class AssemblerContext {
                 // Variable Directives
                 case "LocalDirective":
                     for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
-                        this.local(name, scope) = token.location;
+                        this.local(name, scope).location = token.location;
                     }
 
                     break ;
@@ -215,7 +227,7 @@ class AssemblerContext {
                         const name = this.evaluate_name(token.name, scope);
                         const variable = scope[name] || this.global(name, scope);
 
-                        const value = this.evaluate(token.value);
+                        const value = this.evaluate(token.value, scope);
 
                         if (variable.value) {
                             yield new Message(LEVEL_ERROR, ast.location, `Cannot change frozen value ${NAME}`);
@@ -232,7 +244,7 @@ class AssemblerContext {
                     {
                         const name = this.evaluate_name(token.name, scope);
                         const variable = scope[name] || this.local(name, scope);
-                        const value = this.evaluate(token.value);
+                        const value = this.evaluate(token.value, scope);
 
                         if (variable.value && variable.frozen) {
                             yield new Message(LEVEL_ERROR, ast.location, `Cannot change frozen value ${NAME}`)
@@ -281,7 +293,13 @@ class AssemblerContext {
                     break ;
                 }
             } catch(msg) {
-                yield new Message(LEVEL_ERROR, token.location, msg);
+                if (msg instanceof Message) {
+                    yield msg;
+                } else if(msg instanceof Error) {
+                    throw msg;
+                } else {
+                    yield new Message(LEVEL_ERROR, token.location, msg);
+                }
             }
         }
 

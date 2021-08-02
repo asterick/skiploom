@@ -1,7 +1,8 @@
     LOCAL Z
     X SET 100
-    Y EQU 0FEh
+    Y EQU X+1
     EXTERN (code, SHORT) TEMP
+    WARN X, "Hello dolly"
 
 TEST_M MACRO A, B, C, D
     LD A, I\A
