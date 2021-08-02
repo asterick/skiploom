@@ -142,6 +142,9 @@ class AssemblerContext {
      */
     evaluate(ast, scope) {
         switch (ast.type) {
+        case "Pending":
+            return ast;
+
         case "Number":
             if (typeof ast.value == "number") {
                 return ast;
@@ -159,7 +162,7 @@ class AssemblerContext {
                 variable.used = true;
 
                 if (!variable.value) {
-                    variable.value = { deferred: true, name: ast.name };
+                    variable.value = { type: "Pending", deferred: true, name: ast.name };
                     variable.frozen = true;
                     return variable.value;
                 }
