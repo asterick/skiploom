@@ -268,36 +268,36 @@ class AssemblerContext {
                     break ;
 
                 case "LabelDirective":
-                {
-                    const name = this.evaluate_name(token.name, scope);
-                    const variable = scope[name] || this.local(name, scope);
-                    const value = {
-                        type: "Fragment",
-                        location: token.location,
-                        id: uuid()
-                    };
+                    {
+                        const name = this.evaluate_name(token.name, scope);
+                        const variable = scope[name] || this.local(name, scope);
+                        const value = {
+                            type: "Fragment",
+                            location: token.location,
+                            id: uuid()
+                        };
 
-                    if (variable.value) {
-                        if (variable.value.deferred) {
-                            Object.assign(variable.value, value);
-                            variable.value.deferred = false;
+                        if (variable.value) {
+                            if (variable.value.deferred) {
+                                Object.assign(variable.value, value);
+                                variable.value.deferred = false;
+                            } else {
+                                yield new Message(LEVEL_ERROR, token.location, `Cannot define label ${name}`);
+                                break ;
+                            }
                         } else {
-                            yield new Message(LEVEL_ERROR, token.location, `Cannot define label ${name}`);
-                            break ;
+                            variable.value = value;
                         }
-                    } else {
-                        variable.value = value;
+
+                        // Assign our value
+                        Object.assign(variable, {
+                            location: token.location,
+                            frozen: true
+                        });
+
+                        yield variable.value;
                     }
-
-                    // Assign our value
-                    Object.assign(variable, {
-                        location: token.location,
-                        frozen: true
-                    });
-
-                    yield variable.value;
-                }
-                break ;
+                    break ;
 
                 // Macro Directives
                 //case "MacroDefinitionDirective":
