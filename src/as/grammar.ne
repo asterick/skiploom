@@ -35,7 +35,7 @@ const BinaryOperations = {
 function at(index) { return (data) => data[index] }
 function ignore() { return null }
 function location({ line, col }) {
-      return { line, col, source: global.parseSource }
+      return { line, col }
 }
 
 function unary([op, value]) {
@@ -123,8 +123,7 @@ if_directive ->
       "ENDIF"
       {% ([id,test,,body,elseifs,otherwise]) => ({
             type: "IfDirective",
-            test, body,
-            elseifs, otherwise,
+            conditions: [{test, body}, ... elseifs], otherwise,
             location:location(id)
       }) %}
 

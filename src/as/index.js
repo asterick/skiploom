@@ -1,6 +1,9 @@
+const path = require("path");
+
 const { resolve } = require("../util/resolve.js");
-const { expressionParser, sourceParser } = require("./parsers.js");
+const { expressionParser } = require("./parsers.js");
 const { Scope } = require("./scope.js");
+const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../logging.js");
 
 /* This creates a namespace of defines */
 function defines(... pairs) {
@@ -11,11 +14,6 @@ function defines(... pairs) {
         }
 
         let[,key,,value] = match;
-
-        global.parseSource = {
-            source: "command-line",
-            path: key
-        }
 
         const parser = expressionParser();
         try {
@@ -39,38 +37,13 @@ function uuid() {
     return "some-uuid";
 }
 
-const LEVEL_FATAL = 0;
-const LEVEL_FAIL = 1;
-const LEVEL_WARN = 2;
-const LEVEL_INFO = 3;
-
-const LevelName = {
-    [LEVEL_FATAL]: "Fatal",
-    [LEVEL_FAIL]: "Error",
-    [LEVEL_WARN]: "Warning",
-    [LEVEL_INFO]: "Message",
-}
-
-class Message {
-    constructor(level, location, message) {
-        this.level = level;
-        this.location = location;
-        this.message = message;
-    }
-
-    toString() {
-        if (this.location) {
-            return `${LevelName[this.level]} (${this.location.line}:${this.location.col}): ${this.message}`;
-        } else {
-            return `${LevelName[this.level]}: ${this.message}`;
-        }
-    }
-}
-
 class AssemblerContext {
-    constructor(name) {
-        this.name = name;
+    constructor(globals) {
+        this.parserSource = {
+            source: "command-line"
+        };
 
+        this.globals = globals;
         this.radix = 10;
         this.incomplete = [];
     }
@@ -208,11 +181,18 @@ class AssemblerContext {
     /*
      * First pass assembler
      */
-    async* pass1(ast, scope) {
-        for (let token of ast) {
+    async* pass1(scope, feed) {
+        for await (let token of feed) {
             try {
                 switch (token.type) {
                 // Assembly flow control
+                case "IncludeDirective":
+                    if (token.transform) {
+                        yield* this.include(token.path.value, token.transform.value);
+                    } else {
+                        yield* this.include(token.path.value);
+                    }
+                    break ;
                 case "EndDirective":
                     return ;
 
@@ -370,7 +350,6 @@ class AssemblerContext {
                 //case "DispatchDirective":
                 //case "SectionDirective":
                 //case "AlignDirective":
-                //case "IncludeDirective":
                 //case "RadixDirective":
                 //case "NameDirective":
                 //case "AsciiBlockDirective":
@@ -419,10 +398,10 @@ class AssemblerContext {
         }
     }
 
-    async* defer_evaluate(pass, scope) {
+    async* defer_evaluate(scope, feed) {
         let blocks = [];
 
-        for await (let block of pass) {
+        for await (let block of feed) {
             if (block instanceof Message) {
                 yield block;
                 continue ;
@@ -453,27 +432,42 @@ class AssemblerContext {
         }
     }
 
-    async assemble(path, scope, loader = 'text.loader.js') {
-        // Isolate our namespace
-        global.parserSource = {
-            source: loader,
-            includedFrom: global.parserSource,
-            path
-        }
-
+    async* include (target, module = 'text.loader.js') {
         // Import our source transform
-        loader = require(await resolve(loader));
+        const root = this.parserSource.path ? path.dirname(this.parserSource.path) : process.cwd();
+        const loader = require(await resolve(module));
+        const fn = await resolve(target, root);
 
-        // Parse our sourcecode
-        const parser = sourceParser();
-        for await (let chunk of loader(path)) {
-            parser.feed(chunk);
+        // Isolate our namespace
+        const previous = this.parserSource;
+        this.parserSource = {
+            source: module,
+            includedFrom: this.parserSource,
+            path: fn
+        };
+
+        for await (let token of loader(fn)) {
+            token.location.parserSource = this.parserSource
+            yield token;
         }
-        parser.feed("\n");
+
+        this.parserSource = previous;
+    }
+
+    async* localize(scope) {
+        // TODO
+    }
+
+    async assemble(path)
+    {
+        const scope = new Scope({ ... this.globals });
 
         // Start with first pass assembler
-        const ast = parser.results[0];
-        for await (let block of this.defer_evaluate(this.pass1(ast, scope), scope)) {
+        const feed = this.include(path);
+        //const phase1 =  this.defer_evaluate(scope, this.pass1(scope, feed));
+        const phase1 = feed;
+
+        for await (let block of phase1) {
             // Emitted a log message
             if (block instanceof Message) {
                 console.log(block.toString());
@@ -481,11 +475,14 @@ class AssemblerContext {
                 continue ;
             }
 
+            // End directive (ignore everything that comes next)
+            if (block.type == "EndDirective") {
+                break ;
+            }
+
             // This is for a future pass
             console.log(block);
         }
-
-        global.parserSource = global.parserSource.includedFrom;
     }
 }
 
@@ -494,11 +491,8 @@ async function* assemble({ files, define }) {
 
     for (let fn of files) {
         // Create a new variable scope (protect globals)
-        const scope = new Scope({ ... globals });
-
-        global.parseSource = { source: "file", fn }
-        const ctx = new AssemblerContext(fn);
-        await ctx.assemble(fn, scope);
+        const ctx = new AssemblerContext(globals);
+        await ctx.assemble(fn);
         yield ctx;
     }
 }

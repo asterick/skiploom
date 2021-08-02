@@ -2,12 +2,12 @@ const fs = require("fs").promises;
 const constants = require("fs").constants;
 const path = require("path");
 
-const searchPaths = [path.join(__dirname, '../../loaders')];
+const searchPaths = [path.join(__dirname, '../loaders')];
 
-async function resolve(fn) {
+async function resolve(fn, relative) {
     // These are
     if (fn[0] == '.') {
-        return path.join(process.cwd(), fn);
+        return path.join(relative, fn);
     }
 
     // Absolute path
