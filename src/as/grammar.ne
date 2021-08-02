@@ -83,11 +83,12 @@ directive ->
     | "END" {% ([id]) => ({ type: "EndDirective", location:location(id) }) %}
 
     | "EXTERN" extern_attr_list:? symbol_list
-      {% ([id,attributes,names]) => Object.assign({
+      {% ([id,attributes,names]) => ({
                 type: "ExternDirective",
                 location: location(id),
-                names
-          }, ... attributes)
+                names,
+                attributes: Object.assign({}, ... attributes)
+          })
       %}
     | symbol "EQU" expression {% ([name, value]) => ({ type: "EquateDirective", name, value, location:name.location }) %}
     | symbol "SET" expression {% ([name, value]) => ({ type: "SetDirective", name, value, location:name.location }) %}
@@ -143,8 +144,8 @@ section_type ->
 extern_attr ->
       "SHORT" {% () => ({ model: "short" }) %}
     | "TINY" {% () => ({ model: "tiny" }) %}
-    | "DATA" {% () => ({ location: "data"}) %}
-    | "CODE" {% () => ({ location: "code"}) %}
+    | "DATA" {% () => ({ contents: "data"}) %}
+    | "CODE" {% () => ({ contents: "code"}) %}
 
 section_attr ->
       "SHORT" {% () => ({ model: "short" }) %}
@@ -173,6 +174,7 @@ expression ->
       logical_or_expr {% id %}
     | "#" logical_or_expr {% ([id, value]) => ({ type:"Immediate", value, location:location(id) }) %}
     | "[" logical_or_expr "]" {% ([id, address,]) => ({ type:"IndirectMemory", address, location:location(id) }) %}
+    | "[" logical_or_expr ":" logical_or_expr "]" {% ([id, register, offset,]) => ({ type:"IndirectRegisterOffset", register, offset, location:location(id) }) %}
 
 logical_or_expr ->
       logical_and_expr {% id %}
