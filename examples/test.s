@@ -1,13 +1,13 @@
+    GLOBAL RR
     LOCAL Z
     X SET 100
     Y EQU farts
     Z EQU X
-    R EQU Q
-    Q EQU R
     EXTERN (code, SHORT) TEMP
-    WARN "Just some debugging", X, Z, R, Q
+    WARN "Just some debugging", X, Z
     DEFINE GG 192
     UNDEF GG
+    LD RR
 farts:
 
 TEST_M MACRO A, B, C, D

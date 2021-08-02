@@ -75,13 +75,13 @@ case "DefineSectionDirective":
 */
 
 const LEVEL_FATAL = 0;
-const LEVEL_ERROR = 1;
+const LEVEL_FAIL = 1;
 const LEVEL_WARN = 2;
 const LEVEL_INFO = 3;
 
 const LevelName = {
     [LEVEL_FATAL]: "Fatal",
-    [LEVEL_ERROR]: "Error",
+    [LEVEL_FAIL]: "Error",
     [LEVEL_WARN]: "Warning",
     [LEVEL_INFO]: "Message",
 }
@@ -158,23 +158,19 @@ class Scope {
 }
 
 class AssemblerContext {
-    constructor(name, globals) {
+    constructor(name) {
         this.name = name;
 
         this.radix = 10;
-        this.globals = globals;
-        this.blocks = [];
+        this.incomplete = [];
     }
-
-    /*
-     * Helper functions
-     */
 
     /*
      * Expression evaluation
      */
-    evaluate(ast, scope, guard = []) {
+    flatten(ast, scope, guard = []) {
         switch (ast.type) {
+        case "Fragment":
         case "String":
             return ast;
 
@@ -186,14 +182,14 @@ class AssemblerContext {
                 copy.value = parseInt(ast.value, this.radix);
                 return copy;
             } else {
-                throw new Message(LEVEL_ERROR, ast.location, `Invalid number value: ${ast.value}`);
+                throw new Message(LEVEL_FAIL, ast.location, `Invalid number value: ${ast.value}`);
             }
 
         case "Identifier":
             {
                 // Detect circular reference
                 if (guard.indexOf(ast.name) >= 0) {
-                    throw new Message(LEVEL_ERROR, ast.location, `Circular referece ${guard.join("->")}->${ast.name}`);
+                    throw new Message(LEVEL_FATAL, ast.location, `Circular reference ${guard.join("->")}->${ast.name}`);
                 }
 
                 const variable = scope.get(ast.name) || scope.local(ast.name);
@@ -206,12 +202,33 @@ class AssemblerContext {
                 }
 
                 // Bubble up name (deferred values are implicitly named)
-                return { name:ast.name, ... this.evaluate(scope.get(ast.name).value, scope, guard.concat(ast.name)) };
+                return { name:ast.name, ... this.flatten(scope.get(ast.name).value, scope, guard.concat(ast.name)) };
             }
 
         default:
-            throw new Message(LEVEL_ERROR, ast.location, `Unknown expression type: ${ast.type}`);
+            throw new Message(LEVEL_FAIL, ast.location, `Unknown expression type: ${ast.type}`);
         }
+    }
+
+    evaluate(ast, scope, defer = true) {
+        const value = this.flatten(ast, scope);
+
+        switch (value.type) {
+            case "Number":
+            case "String":
+            case "Fragment":
+                break ;
+            default:
+                if (defer) {
+                    this.incomplete.push(value);
+                } else {
+                    console.log(ast);
+                    throw new Message(LEVEL_FAIL, ast.location, "Cannot defer evaluation for this statement");
+                }
+                break ;
+        }
+
+        return value;
     }
 
     evaluate_name(ast, scope) {
@@ -221,23 +238,33 @@ class AssemblerContext {
         }
 
         // Attempt to resolve name
-        let condensed = this.evaluate(ast, scope);
-        if (!condensed.name) {
-            throw new Message(LEVEL_ERROR, ast.location, "Expression does not evaluate with a name");
+        let condensed = this.evaluate(ast, scope, false);
+        if (condensed.type != "Identifier") {
+            throw new Message(LEVEL_FAIL, ast.location, "Expression did not evaluate to an identifier");
         }
 
         return condensed.name;
     }
 
     evaluate_string(ast, scope) {
-        let condensed = this.evaluate(ast, scope, [], true);
+        let condensed = this.evaluate(ast, scope, false);
 
         if (condensed.type == "String") {
             return condensed.value;
         } else if (condensed.type == "Number") {
             return condensed.value.toString();
         } else {
-            throw new Message(LEVEL_ERROR, ast.location, "Expression does not evaluate to a string");
+            return null;
+        }
+    }
+
+    evaluate_number(ast, scope) {
+        let condensed = this.evaluate(ast, scope, false);
+
+        if (condensed.type == "Number") {
+            return condensed.value;
+        } else {
+            return null;
         }
     }
 
@@ -272,7 +299,7 @@ class AssemblerContext {
 
                         for (const attr in token.attributes) {
                             if (variable[attr] && variable[attr] != token.attributes[attr]) {
-                                yield new Message(LEVEL_ERROR, token.location, `Variable ${name} already defines ${attr} property as ${variable[attr]}`)
+                                yield new Message(LEVEL_FAIL, token.location, `Variable ${name} already defines ${attr} property as ${variable[attr]}`)
                                 break ;
                             }
 
@@ -287,7 +314,7 @@ class AssemblerContext {
                         const variable = scope.get(name) || scope.local(name);
 
                         if (variable.frozen) {
-                            throw new Message(LEVEL_ERROR, token.location, `Cannot set frozen value ${name}`)
+                            throw new Message(LEVEL_FAIL, token.location, `Cannot set frozen value ${name}`)
                         }
 
                         Object.assign(variable, {
@@ -304,7 +331,7 @@ class AssemblerContext {
                         const value = this.evaluate(token.value, scope);
 
                         if (variable.value) {
-                            throw new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
+                            throw new Message(LEVEL_FAIL, token.location, `Cannot change frozen value ${name}`);
                         }
 
                         // Assign our value
@@ -327,7 +354,7 @@ class AssemblerContext {
                         };
 
                         if (variable.value) {
-                            throw new Message(LEVEL_ERROR, token.location, `Cannot define label ${name}`);
+                            throw new Message(LEVEL_FAIL, token.location, `Cannot define label ${name}`);
                         }
 
                         // Assign our value
@@ -347,9 +374,9 @@ class AssemblerContext {
                         const variable = scope.get(name) || scope.global(name);
 
                         if (variable.value) {
-                            throw new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
+                            throw new Message(LEVEL_FAIL, token.location, `Cannot change frozen value ${name}`);
                         } else if (variable.used) {
-                            throw new Message(LEVEL_ERROR, token.location, `Defines may not be deferred ${name}`);
+                            throw new Message(LEVEL_FAIL, token.location, `Defines may not be deferred ${name}`);
                         }
 
                         // Assign our value
@@ -380,17 +407,21 @@ class AssemblerContext {
                     break ;
 
                 // Display directives
-                //case "MessageDirective":
+                case "MessageDirective":
+                    yield new Message(LEVEL_INFO, token.location, token.message.map((exp) => this.evaluate_string(exp, scope)).join(" "));
+                    break ;
                 case "WarningDirective":
                     yield new Message(LEVEL_WARN, token.location, token.message.map((exp) => this.evaluate_string(exp, scope)).join(" "));
                     break ;
-                //case "FailureDirective":
+                case "FailureDirective":
+                    yield new Message(LEVEL_FAIL, token.location, token.message.map((exp) => this.evaluate_string(exp, scope)).join(" "));
+                    break ;
 
                 // Macro Directives
                 //case "MacroDefinitionDirective":
                 //case "PurgeMacrosDirective":
                 case "ExitMacroDirective":
-                    yield new Message(LEVEL_ERROR, token.location, "Misplaced EXITM, Must be used inside of a macro");
+                    yield new Message(LEVEL_FAIL, token.location, "Misplaced EXITM, Must be used inside of a macro");
                     break ;
 
                 //case "DispatchDirective":
@@ -411,22 +442,22 @@ class AssemblerContext {
                 //case "IfDirective":
                 //case "DefineSectionDirective":
                 default:
-                    yield new Message(LEVEL_ERROR, token.location, `Unhandled directive ${token.type}`);
+                    yield new Message(LEVEL_FAIL, token.location, `Unhandled directive ${token.type}`);
                     break ;
                 }
             } catch(msg) {
                 if (msg instanceof Message) {
                     yield msg;
+                    if (msg.level == LEVEL_FATAL) return ;
                 } else if(msg instanceof Error) {
                     throw msg;
                 } else {
-                    yield new Message(LEVEL_ERROR, token.location, msg);
+                    yield new Message(LEVEL_FAIL, token.location, msg);
                 }
             }
         }
 
-        // TODO: RERUN EVALUATIONS AFTER WE'VE FINISHED WITH THIS SCOPE (forward deferred)
-
+        // Throw errors on undefined values
         for (const name in scope.top) {
             if (!scope.top.hasOwnProperty(name)) {
                 continue ;
@@ -441,12 +472,29 @@ class AssemblerContext {
                     yield new Message(LEVEL_WARN, variable.location, `Local variable ${name} is defined, but is never used`);
                 }
             } else if (!variable.value) {
-                yield new Message(LEVEL_ERROR, variable.location, `Local variable ${name} is used, but is never defined`);
+                yield new Message(LEVEL_FAIL, variable.location, `Local variable ${name} is used, but is never defined`);
+            }
+        }
+
+        // Reevaluate local deferred
+        let exp;
+        while (exp = this.incomplete.shift()) {
+            try {
+                Object.assign(exp, this.flatten(exp, scope));
+            } catch (msg) {
+                if (msg instanceof Message) {
+                    yield msg;
+                    if (msg.level == LEVEL_FATAL) return ;
+                } else if(msg instanceof Error) {
+                    throw msg;
+                } else {
+                    yield new Message(LEVEL_FAIL, token.location, msg);
+                }
             }
         }
     }
 
-    async assemble(path, loader = 'text.loader.js') {
+    async assemble(path, scope, loader = 'text.loader.js') {
         // Isolate our namespace
         global.parserSource = {
             source: loader,
@@ -465,7 +513,7 @@ class AssemblerContext {
         parser.feed("\n");
 
         // Start with first pass assembler
-        var scope = Object.create(this.globals);
+        let blocks = [];
         for await (let block of this.pass1(parser.results[0], scope)) {
             // Emitted a log message
             if (block instanceof Message) {
@@ -474,7 +522,7 @@ class AssemblerContext {
             }
 
             // This is for a future pass
-            this.blocks.push(block);
+            blocks.push(block);
         }
 
         global.parserSource = global.parserSource.includedFrom;
@@ -489,8 +537,8 @@ async function* assemble({ files, define }) {
         const scope = new Scope({ ... globals });
 
         global.parseSource = { source: "file", fn }
-        const ctx = new AssemblerContext(fn, scope);
-        await ctx.assemble(fn);
+        const ctx = new AssemblerContext(fn);
+        await ctx.assemble(fn, scope);
         yield ctx;
     }
 }
