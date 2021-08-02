@@ -33,6 +33,11 @@ function defines(... pairs) {
     }, {});
 }
 
+function uuid() {
+    // TODO: Return actual UUID
+    return "some-uuid";
+}
+
 /*
 case "LabelDirective":
 case "DispatchDirective":
@@ -106,14 +111,37 @@ class AssemblerContext {
     }
 
     /*
+     * Helper functions
+     */
+    local(name, scope) {
+        if (this.globals.hasOwnProperty(name)) {
+            throw `Global ${name} is already defined`;
+        } else if (!scope.hasOwnProperty(name)) {
+            // Empty local container
+            scope[name] = { };
+        }
+
+        return scope[name];
+    }
+
+    global(name, scope) {
+        if (scope[name]) {
+            if (scope[name] != this.globals[name]) {
+                throw `Local of name ${name} already exists`;
+            }
+        } else {
+            // Create container for variable
+            this.globals[name] = { frozen: true };
+        }
+
+        return scope[name];
+    }
+
+    /*
      * Expression evaluation
      */
     evaluate(ast, scope) {
         switch (ast.type) {
-        case "Undefined":
-            // This is a place holder value that cannot yet be flattened
-            return ast;
-
         case "Number":
             if (typeof ast.value == "number") {
                 return ast;
@@ -128,19 +156,18 @@ class AssemblerContext {
         case "Identifier":
             {
                 const variable = scope[ast.name] || this.local(ast.name, scope);
+                variable.used = true;
 
-                // Create a deferred value
-                if (variable.type == "Undefined") {
+                // This is an undefined value (likely a label), freeze and set as undefined
+                // TODO: Before the scope is closed, we should force flatten expression
+                if (!variable.value) {
                     variable.frozen = true;
+                    return ast;
                 }
 
-                // Bubble up name
-                let value = this.evaluate(variable, scope);
-                value.name = value.name || ast.name;
-
-                return value;
+                // Bubble up name (deferred values are implicitly named)
+                return { name:ast.name, ... this.evaluate(scope[ast.name].value, scope) };
             }
-            break ;
 
         default:
             throw new Message(LEVEL_ERROR, ast.location, `Unknown expression type: ${ast.type}`);
@@ -160,33 +187,6 @@ class AssemblerContext {
         }
 
         return condensed.name;
-    }
-
-    /*
-     * Helper functions
-     */
-    local(name, scope) {
-        if (this.globals.hasOwnProperty(name)) {
-            throw `Global ${name} is already defined`;
-        } else if (!scope.hasOwnProperty(name)) {
-            // Empty local container
-            scope[name] = { type: "Undefined", name };
-        }
-
-        return scope[name];
-    }
-
-    global(name, scope) {
-        if (scope[name]) {
-            if (scope[name] != this.globals[name]) {
-                throw `Local of name ${name} already exists`;
-            }
-        } else {
-            // Create container for variable
-            this.globals[name] = { type: "Undefined", name, frozen: true };
-        }
-
-        return scope[name];
     }
 
     /*
@@ -228,16 +228,17 @@ class AssemblerContext {
                         const name = this.evaluate_name(token.name, scope);
                         const variable = scope[name] || this.global(name, scope);
 
-                        if (variable.type != "Undefined") {
+                        if (variable.value) {
                             yield new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
                             break ;
                         }
 
                         // Assign our value
-                        const value = this.evaluate(token.value, scope);
-                        Object.assign(variable, value);
-                        variable.frozen = true;
-                        variable.location = token.location;
+                        Object.assign(variable, {
+                            value: this.evaluate(token.value, scope),
+                            location: token.location,
+                            frozen: true
+                        });
                     }
                     break ;
 
@@ -250,29 +251,35 @@ class AssemblerContext {
                             yield new Message(LEVEL_ERROR, token.location, `Cannot set frozen value ${name}`)
                         }
 
-                        const value = this.evaluate(token.value, scope);
-                        Object.assign(variable, value);
-                        variable.location = token.location;
+                        Object.assign(variable, {
+                            value: this.evaluate(token.value, scope),
+                            location: token.location
+                        });
                     }
                     break ;
+
                 case "LabelDirective":
                     {
                         const name = this.evaluate_name(token.name, scope);
                         const variable = scope[name] || this.local(name, scope);
 
-                        if (variable.type != "Undefined") {
-                            yield new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
+                        if (variable.value) {
+                            yield new Message(LEVEL_ERROR, token.location, `Cannot define label ${name}`);
                             break ;
                         }
 
                         // Assign our value
-                        const value = { type: "Fragment", location: token.location, id: "SOMEUUID" };
+                        Object.assign(variable, {
+                            value: {
+                                type: "Fragment",
+                                location: token.location,
+                                id: uuid()
+                            },
+                            location: token.location,
+                            frozen: true
+                        });
 
-                        Object.assign(variable, value);
-                        variable.frozen = true;
-                        variable.location = token.location;
-
-                        yield value;
+                        yield variable.value;
                     }
                     break ;
 
@@ -329,14 +336,15 @@ class AssemblerContext {
             }
 
             const variable = scope[name];
+            //console.log(name, variable);
 
             if (!variable.used) {
-                if (variable.value) {
+                if (variable.type == "Undefined") {
                     yield new Message(LEVEL_WARN, variable.location, `Local variable ${name} is defined, but is never used`);
                 } else {
                     yield new Message(LEVEL_WARN, variable.location, `Unused identifier ${name}`);
                 }
-            } else if (!variable.value) {
+            } else if (variable.type == "Undefined") {
                 yield new Message(LEVEL_ERROR, variable.location, `Local variable ${name} is used, but is never defined`);
             }
         }

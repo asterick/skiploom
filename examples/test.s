@@ -2,6 +2,8 @@
     X SET 100
     Y EQU farts
     Z EQU X
+    R EQU Q+1
+    Q EQU R+1
     EXTERN (code, SHORT) TEMP
     WARN X, "Hello dolly"
 
