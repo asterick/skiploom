@@ -158,11 +158,10 @@ class AssemblerContext {
                 const variable = scope[ast.name] || this.local(ast.name, scope);
                 variable.used = true;
 
-                // This is an undefined value (likely a label), freeze and set as undefined
-                // TODO: Before the scope is closed, we should force flatten expression
                 if (!variable.value) {
+                    variable.value = { deferred: true, name: ast.name };
                     variable.frozen = true;
-                    return ast;
+                    return variable.value;
                 }
 
                 // Bubble up name (deferred values are implicitly named)
@@ -223,25 +222,6 @@ class AssemblerContext {
                     }
                     break ;
 
-                case "EquateDirective":
-                    {
-                        const name = this.evaluate_name(token.name, scope);
-                        const variable = scope[name] || this.global(name, scope);
-
-                        if (variable.value) {
-                            yield new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
-                            break ;
-                        }
-
-                        // Assign our value
-                        Object.assign(variable, {
-                            value: this.evaluate(token.value, scope),
-                            location: token.location,
-                            frozen: true
-                        });
-                    }
-                    break ;
-
                 case "SetDirective":
                     {
                         const name = this.evaluate_name(token.name, scope);
@@ -258,23 +238,56 @@ class AssemblerContext {
                     }
                     break ;
 
-                case "LabelDirective":
+                    case "EquateDirective":
+                        {
+                            const name = this.evaluate_name(token.name, scope);
+                            const variable = scope[name] || this.global(name, scope);
+                            const value = this.evaluate(token.value, scope);
+
+                            if (variable.value) {
+                                if (variable.value.deferred) {
+                                    Object.assign(variable.value, value);
+                                    variable.value.deferred = false;
+                                } else {
+                                    yield new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
+                                    break ;
+                                }
+                            } else {
+                                variable.value = value;
+                            }
+
+                            // Assign our value
+                            Object.assign(variable, {
+                                location: token.location,
+                                frozen: true
+                            });
+                        }
+                        break ;
+
+                    case "LabelDirective":
                     {
                         const name = this.evaluate_name(token.name, scope);
                         const variable = scope[name] || this.local(name, scope);
+                        const value = {
+                            type: "Fragment",
+                            location: token.location,
+                            id: uuid()
+                        };
 
                         if (variable.value) {
-                            yield new Message(LEVEL_ERROR, token.location, `Cannot define label ${name}`);
-                            break ;
+                            if (variable.value.deferred) {
+                                Object.assign(variable.value, value);
+                                variable.value.deferred = false;
+                            } else {
+                                yield new Message(LEVEL_ERROR, token.location, `Cannot define label ${name}`);
+                                break ;
+                            }
+                        } else {
+                            variable.value = value;
                         }
 
                         // Assign our value
                         Object.assign(variable, {
-                            value: {
-                                type: "Fragment",
-                                location: token.location,
-                                id: uuid()
-                            },
                             location: token.location,
                             frozen: true
                         });
@@ -336,15 +349,15 @@ class AssemblerContext {
             }
 
             const variable = scope[name];
-            //console.log(name, variable);
+            const undefined_var = !variable.value || variable.value.deferred;
 
             if (!variable.used) {
-                if (variable.type == "Undefined") {
-                    yield new Message(LEVEL_WARN, variable.location, `Local variable ${name} is defined, but is never used`);
-                } else {
+                if (undefined_var) {
                     yield new Message(LEVEL_WARN, variable.location, `Unused identifier ${name}`);
+                } else {
+                    yield new Message(LEVEL_WARN, variable.location, `Local variable ${name} is defined, but is never used`);
                 }
-            } else if (variable.type == "Undefined") {
+            } else if (undefined_var) {
                 yield new Message(LEVEL_ERROR, variable.location, `Local variable ${name} is used, but is never defined`);
             }
         }
