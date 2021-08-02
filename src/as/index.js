@@ -110,6 +110,10 @@ class AssemblerContext {
      */
     evaluate(ast, scope) {
         switch (ast.type) {
+        case "Undefined":
+            // This is a place holder value that cannot yet be flattened
+            return ast;
+
         case "Number":
             if (typeof ast.value == "number") {
                 return ast;
@@ -122,20 +126,21 @@ class AssemblerContext {
             }
 
         case "Identifier":
-            if (scope[ast.name]) {
-                const variable = scope[ast.name];
-                variable.used = true;
-                const value = this.evaluate(variable.value, scope);
+            {
+                const variable = scope[ast.name] || this.local(ast.name, scope);
 
-                // Carry the name down
-                if (!value.name) {
-                    value.name = ast.name
+                // Create a deferred value
+                if (variable.type == "Undefined") {
+                    variable.frozen = true;
                 }
 
+                // Bubble up name
+                let value = this.evaluate(variable, scope);
+                value.name = value.name || ast.name;
+
                 return value;
-            } else {
-                throw new Message(LEVEL_ERROR, ast.location, `Reference to undeclared identifier ${ast.name}`);
             }
+            break ;
 
         default:
             throw new Message(LEVEL_ERROR, ast.location, `Unknown expression type: ${ast.type}`);
@@ -165,7 +170,7 @@ class AssemblerContext {
             throw `Global ${name} is already defined`;
         } else if (!scope.hasOwnProperty(name)) {
             // Empty local container
-            scope[name] = {};
+            scope[name] = { type: "Undefined", name };
         }
 
         return scope[name];
@@ -178,7 +183,7 @@ class AssemblerContext {
             }
         } else {
             // Create container for variable
-            this.globals[name] = { frozen: true };
+            this.globals[name] = { type: "Undefined", name, frozen: true };
         }
 
         return scope[name];
@@ -196,16 +201,12 @@ class AssemblerContext {
                     for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
                         this.local(name, scope).location = token.location;
                     }
-
                     break ;
-
                 case "GlobalDirective":
                     for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
                         this.global(name, scope).location = token.location;
                     }
-
                     break ;
-
                 case "ExternDirective":
                     for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
                         const variable = this.global(name, scope);
@@ -227,31 +228,51 @@ class AssemblerContext {
                         const name = this.evaluate_name(token.name, scope);
                         const variable = scope[name] || this.global(name, scope);
 
-                        const value = this.evaluate(token.value, scope);
-
-                        if (variable.value) {
-                            yield new Message(LEVEL_ERROR, ast.location, `Cannot change frozen value ${NAME}`);
+                        if (variable.type != "Undefined") {
+                            yield new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
                             break ;
                         }
 
-                        // Can only be set once
+                        // Assign our value
+                        const value = this.evaluate(token.value, scope);
+                        Object.assign(variable, value);
                         variable.frozen = true;
-                        variable.value = value;
                         variable.location = token.location;
                     }
                     break ;
+
                 case "SetDirective":
                     {
                         const name = this.evaluate_name(token.name, scope);
                         const variable = scope[name] || this.local(name, scope);
-                        const value = this.evaluate(token.value, scope);
 
-                        if (variable.value && variable.frozen) {
-                            yield new Message(LEVEL_ERROR, ast.location, `Cannot change frozen value ${NAME}`)
+                        if (variable.frozen) {
+                            yield new Message(LEVEL_ERROR, token.location, `Cannot set frozen value ${name}`)
                         }
 
-                        variable.value = value;
+                        const value = this.evaluate(token.value, scope);
+                        Object.assign(variable, value);
                         variable.location = token.location;
+                    }
+                    break ;
+                case "LabelDirective":
+                    {
+                        const name = this.evaluate_name(token.name, scope);
+                        const variable = scope[name] || this.local(name, scope);
+
+                        if (variable.type != "Undefined") {
+                            yield new Message(LEVEL_ERROR, token.location, `Cannot change frozen value ${name}`);
+                            break ;
+                        }
+
+                        // Assign our value
+                        const value = { type: "Fragment", location: token.location, id: "SOMEUUID" };
+
+                        Object.assign(variable, value);
+                        variable.frozen = true;
+                        variable.location = token.location;
+
+                        yield value;
                     }
                     break ;
 
@@ -262,7 +283,6 @@ class AssemblerContext {
                     yield new Message(LEVEL_ERROR, ast.location, "Misplaced EXITM, Must be used inside of a macro");
                     break ;
 
-                //case "LabelDirective":
                 //case "DispatchDirective":
                 //case "SectionDirective":
                 //case "AlignDirective":

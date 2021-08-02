@@ -1,8 +1,11 @@
     LOCAL Z
     X SET 100
-    Y EQU X+1
+    Y EQU farts
+    Z EQU X
     EXTERN (code, SHORT) TEMP
     WARN X, "Hello dolly"
+
+farts:
 
 TEST_M MACRO A, B, C, D
     LD A, I\A
