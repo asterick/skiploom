@@ -1,4 +1,5 @@
     Z EQU 192
+    INFO 192 + 256
 
 TEST_M MACRO A, B, C, D
     LD A, I\A

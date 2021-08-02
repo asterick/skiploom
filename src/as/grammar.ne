@@ -43,7 +43,7 @@ function unary([op, value]) {
 }
 
 function binary([left, op, right]) {
-      return { type:"BinaryOperation", left, right, op: BinaryOperations[op.value], location: location(left) }
+      return { type:"BinaryOperation", left, right, op: BinaryOperations[op.value], location: location(op) }
 }
 %}
 

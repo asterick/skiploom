@@ -1,5 +1,6 @@
 const { resolve } = require("../util/resolve.js");
 const { expressionParser, sourceParser } = require("./parsers.js");
+const { Scope } = require("./scope.js");
 
 /* This creates a namespace of defines */
 function defines(... pairs) {
@@ -38,41 +39,6 @@ function uuid() {
     return "some-uuid";
 }
 
-/*
-case "LabelDirective":
-case "DispatchDirective":
-case "SectionDirective":
-case "AlignDirective":
-case "DefineDirective":
-case "UndefineDirective":
-case "MessageDirective":
-case "WarningDirective":
-case "FailureDirective":
-case "IncludeDirective":
-case "RadixDirective":
-case "EndDirective":
-case "ExternDirective":
-case "EquateDirective":
-case "SetDirective":
-case "LocalDirective":
-case "GlobalDirective":
-case "NameDirective":
-case "AsciiBlockDirective":
-case "TerminatedAsciiBlockDirective":
-case "DataBytesDirective":
-case "DataWordsDirective":
-case "DataAllocateDirective":
-case "ExitMacroDirective":
-case "PurgeMacrosDirective":
-case "CountDupDirective":
-case "ListDupDirective":
-case "CharacterDupDirective":
-case "SequenceDupDirective":
-case "MacroDefinitionDirective":
-case "IfDirective":
-case "DefineSectionDirective":
-*/
-
 const LEVEL_FATAL = 0;
 const LEVEL_FAIL = 1;
 const LEVEL_WARN = 2;
@@ -101,61 +67,6 @@ class Message {
     }
 }
 
-class Scope {
-    constructor (globals, top = null) {
-        this.globals = globals;
-        this.top = top || Object.create(globals);
-    }
-
-    scope () {
-        return new Scope(this.globals, Object.create(this.top));
-    }
-
-    local(name) {
-        if (this.globals.hasOwnProperty(name)) {
-            throw `Global ${name} is already defined`;
-        } else if (!this.top.hasOwnProperty(name)) {
-            // Empty local container
-            this.top[name] = { };
-        }
-
-        return this.top[name];
-    }
-
-    global(name) {
-        if (this.top[name]) {
-            if (this.top[name] != this.globals[name]) {
-                throw `Local of name ${name} already exists`;
-            }
-        } else {
-            // Create container for variable
-            this.globals[name] = { frozen: true };
-        }
-
-        return this.top[name];
-    }
-
-    get(name) {
-        return this.top[name];
-    }
-
-    remove(name) {
-        let tree = this.top;
-
-        do {
-            if (tree.hasOwnProperty(name)) {
-                delete tree[name];
-            }
-
-            tree = Object.getPrototypeOf(tree);
-        } while (tree != Object.prototype);
-    }
-
-    toString() {
-        return JSON.stringify(this.top);
-    }
-}
-
 class AssemblerContext {
     constructor(name) {
         this.name = name;
@@ -167,11 +78,49 @@ class AssemblerContext {
     /*
      * Expression evaluation
      */
+    flatten_unary(ast, scope, guard) {
+        console.log(ast);
+        throw "TODO"
+    }
+
+    flatten_binary(ast, scope, guard) {
+        switch (ast.op) {
+            case "LogicalOr":
+            case "LogicalAnd":
+            case "BitwiseOr":
+            case "BitwiseXor":
+            case "BitwiseAnd":
+            case "Equal":
+            case "NotEqual":
+            case "Greater":
+            case "Less":
+            case "GreaterEqual":
+            case "LessEqual":
+            case "ShiftLeft":
+            case "ShiftRight":
+            case "Concatinate":
+            case "Add":
+            case "Subtract":
+            case "Multiply":
+            case "Divide":
+            case "Modulo":
+                break ;
+            default:
+                throw `TODO: ${ast.op}`;
+        }
+    }
+
     flatten(ast, scope, guard = []) {
         switch (ast.type) {
         case "Fragment":
         case "String":
             return ast;
+
+        case "UnaryOperation":
+            return this.flatten_unary(ast, scope, guard);
+
+        case "BinaryOperation":
+            return this.flatten_binary(ast, scope, guard);
 
         case "Number":
             if (typeof ast.value == "number") {
@@ -244,7 +193,7 @@ class AssemblerContext {
         return condensed.name;
     }
 
-    evaluate_string(ast, scope) {
+    evaluate_value(ast, scope) {
         let condensed = this.evaluate(ast, scope, false);
 
         if (condensed.type == "String") {
@@ -256,22 +205,10 @@ class AssemblerContext {
         }
     }
 
-    evaluate_number(ast, scope) {
-        let condensed = this.evaluate(ast, scope, false);
-
-        if (condensed.type == "Number") {
-            return condensed.value;
-        } else {
-            return null;
-        }
-    }
-
     /*
      * First pass assembler
      */
     async* pass1(ast, scope) {
-        scope = scope.scope();
-
         for (let token of ast) {
             try {
                 switch (token.type) {
@@ -406,7 +343,15 @@ class AssemblerContext {
 
                 // Display directives
                 case "MessageDirective":
-                    yield new Message(LEVEL_INFO, token.location, token.message.map((exp) => this.evaluate_string(exp, scope)).join(" "));
+                    yield new Message(LEVEL_INFO, token.location, token.message.map((exp) => {
+                        let result = this.evaluate(exp, scope)
+
+                        if (result.type == "Number" || result.type == "String") {
+                            return result.value.toString();
+                        } else  {
+                            throw new Message(LEVEL_ERROR, exp.location, "Expression does not evaluate to a string");
+                        }
+                    }).join(" "));
                     break ;
                 case "WarningDirective":
                     yield new Message(LEVEL_WARN, token.location, token.message.map((exp) => this.evaluate_string(exp, scope)).join(" "));
