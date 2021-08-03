@@ -94,7 +94,28 @@ class AssemblerContext {
         const left = this.flatten(ast.left, scope, guard);
         const right = this.flatten(ast.right, scope, guard);
 
-        if (!this.isValueType(left) || !this.isValueType(right)) {
+        // These pre-empt
+        if (!this.isValueType(left)) {
+            return { ... ast, left, right };
+        }
+
+        switch (ast.op) {
+            case "LogicalOr":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asTruthy(left) ? left : right
+                };
+
+            case "LogicalAnd":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: !this.asTruthy(left) ? left : right
+                };
+        }
+
+        if (!this.isValueType(right)) {
             return { ... ast, left, right };
         }
 
@@ -104,20 +125,6 @@ class AssemblerContext {
                     type: "Number",
                     location: ast.location,
                     value: this.asString(left) + this.asString(right)
-                };
-
-            case "LogicalOr":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asNumber(left) || this.asNumber(right)
-                };
-
-            case "LogicalAnd":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asNumber(left) && this.asNumber(right)
                 };
 
             case "BitwiseOr":
@@ -254,6 +261,7 @@ class AssemblerContext {
             return this.flatten_unary(ast, scope, guard);
         case "BinaryOperation":
             return this.flatten_binary(ast, scope, guard);
+        // TODO: TERNARY
 
         // Variables
         case "Identifier":
@@ -314,6 +322,18 @@ class AssemblerContext {
         }
 
         return condensed.name;
+    }
+
+    async prospect(scope, ast) {
+        const shadow = scope.preserve().scope();
+        const pass = this.defer_evaluate(shadow, this.pass1(shadow, ast));
+        const body = [];
+
+        for await (const block of pass) {
+            body.push(block);
+        }
+
+        return { shadow, body };
     }
 
     /*
@@ -466,15 +486,13 @@ class AssemblerContext {
 
                 case "IfDirective":
                     {
-                        console.log(token);
-
                         let otherwise = token.otherwise;
+                        let conditions = [];
 
                         for (const { test, body } of token.conditions) {
                             const condition = this.evaluate(test, scope);
 
                             if (this.isValueType(condition)) {
-                                console.log(this.asTruthy(condition));
                                 if (this.asTruthy(condition)) {
                                     // This is a stoping condition
                                     otherwise = body;
@@ -486,17 +504,19 @@ class AssemblerContext {
                             }
 
                             // Evaluate body here
-                            const shadow = scope.preserve().scope();
-                            const pass = this.defer_evaluate(shadow, this.pass1(shadow, body));
-                            for await (const block of pass) {
-                                console.log(block);
-                            }
+                            conditions.push({
+                                condition,
+                                ... await this.prospect(scope, body)
+                            });
                         }
 
                         if (otherwise) {
-                            // Do otherwise
+                            otherwise = await this.prospect(scope, otherwise);
                         }
 
+                        console.log(conditions, otherwise);
+
+                        // TODO: PROSPECT
                     }
 
                     break ;

@@ -81,7 +81,6 @@ class Scope {
             for (const [name, value] of Object.entries(top)) {
                 target[name] = { ... value };
             }
-
         }
 
         // Create a mirrored scope (mutable)

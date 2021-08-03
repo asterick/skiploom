@@ -21,8 +21,13 @@
 
     IF A == 1
         B SET B + 02
+        WARN B
     ELSEIF A == 2
         B SET B + 03
+        WARN B
+    ELSEIF ""
+        WARN C
     ELSE
         B SET B + 04
+        WARN B
     ENDIF

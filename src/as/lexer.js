@@ -52,8 +52,8 @@ const lexer = moo.compile({
     continuation: { match: /\\\r\n?|\\\n\r?/, lineBreaks: true },
     comment: { match:/;(?:[^\n\r\\]|\\(?:\n?\r?|\r?\n?))*/, lineBreaks: true },
     string: [
-        { match: /"(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r"])+"/, value: (s) => escape(s.slice(1,-1)) },
-        { match: /'(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r'])+'/, value: (s) => escape(s.slice(1,-1)) },
+        { match: /"(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r"])*"/, value: (s) => escape(s.slice(1,-1)) },
+        { match: /'(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r'])*'/, value: (s) => escape(s.slice(1,-1)) },
     ],
     function_name: { match: /@[a-zA-Z]+/, value: (v) => v.slice(1).toUpperCase() },
     identifier: {
