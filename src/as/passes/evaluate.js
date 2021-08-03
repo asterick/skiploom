@@ -197,7 +197,7 @@ function flatten_binary(ast, scope, guard) {
     }
 }
 
-function flatten(ast, scope, guard = []) {
+function flatten(ast, scope, propegate, guard = []) {
     switch (ast.type) {
     // Value types
     case "Fragment":
@@ -222,6 +222,10 @@ function flatten(ast, scope, guard = []) {
     // Variables
     case "Identifier":
         {
+            if (!propegate) {
+                return ast;
+            }
+
             // Detect circular reference
             if (guard.indexOf(ast.name) >= 0) {
                 throw new Message(LEVEL_FATAL, ast.location, `Circular reference ${guard.join("->")}->${ast.name}`);
@@ -237,7 +241,7 @@ function flatten(ast, scope, guard = []) {
             }
 
             // Bubble up name (deferred values are implicitly named)
-            return { name:ast.name, ... flatten(scope.get(ast.name).value, scope, guard.concat(ast.name)) };
+            return { name:ast.name, ... flatten(scope.get(ast.name).value, scope, propegate, guard.concat(ast.name)) };
         }
 
     default:
@@ -245,12 +249,12 @@ function flatten(ast, scope, guard = []) {
     }
 }
 
-function evaluate(scope, tree) {
+function evaluate(scope, tree, propegate = true) {
     // Helper functions for arrays an falsy values
     if (tree == null) {
         return tree;
     } else if (Array.isArray(tree)) {
-        return tree.map((idx) => evaluate(scope, idx));
+        return tree.map((idx) => evaluate(scope, idx, propegate));
     } else if (tree === undefined) {
         throw "Attempted to evaluate an undefined field"
     }
@@ -295,13 +299,13 @@ async function* evaluate_pass(scope, tree) {
             case "EquateDirective":
             case "DefineDirective":
                 Object.assign(token, {
-                    name: evaluate(scope, token.name),
+                    name: evaluate(scope, token.name, false),
                     value: evaluate(scope, token.value)
                 });
                 break ;
             case "LabelDirective":
                 Object.assign(token, {
-                    name: evaluate(scope, token.name)
+                    name: evaluate(scope, token.name, false)
                 });
                 break ;
             case "IfDirective":

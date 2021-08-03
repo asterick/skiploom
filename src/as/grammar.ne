@@ -6,11 +6,11 @@ const UnaryOperations = {
       "~": "BitwiseComplement",
       "-": "Negate",
       "+": "Positive",
+}
+const BinaryOperations = {
       "\\": "IdentifierConcat",
       "\\?": "ValueConcat",
       "\\%?": "HexValueConcat",
-}
-const BinaryOperations = {
       "||": "LogicalOr",
       "&&": "LogicalAnd",
       "|": "BitwiseOr",

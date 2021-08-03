@@ -38,6 +38,15 @@ function uuid() {
     return "some-uuid";
 }
 
+function evaluate_name(ast) {
+    // Short cut evaluate
+    if (!ast.name) {
+        throw new Message(LEVEL_FAIL, ast.location, "Expression did not evaluate to an identifier");
+    }
+
+    return ast.name;
+}
+
 class AssemblerContext {
     constructor(globals) {
         this.parserSource = {
@@ -46,21 +55,6 @@ class AssemblerContext {
 
         this.globals = globals;
         this.incomplete = [];
-    }
-
-    evaluate_name(ast, scope) {
-        // Short cut evaluate
-        if (ast.name) {
-            return ast.name;
-        }
-
-        // Attempt to resolve name
-        let condensed = this.evaluate(ast, scope, false);
-        if (condensed.type != "Identifier") {
-            throw new Message(LEVEL_FAIL, ast.location, "Expression did not evaluate to an identifier");
-        }
-
-        return condensed.name;
     }
 
     async prospect(scope, ast) {
@@ -96,22 +90,22 @@ class AssemblerContext {
                     }
                     break ;
                 case "EndDirective":
-                    // This Ter
-                    break ;
+                    yield token;
+                    return ;
 
                 // Variable Directives
                 case "LocalDirective":
-                    for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
+                    for (const name of token.names.map(evaluate_name)) {
                         scope.local(name).location = token.location;
                     }
                     break ;
                 case "GlobalDirective":
-                    for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
+                    for (const name of token.names.map(evaluate_name)) {
                         scope.global(name).location = token.location;
                     }
                     break ;
                 case "ExternDirective":
-                    for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
+                    for (const name of token.names.map(evaluate_name)) {
                         const variable = scope.global(name);
                         variable.location = token.locaiton;
 
@@ -128,7 +122,7 @@ class AssemblerContext {
 
                 case "SetDirective":
                     {
-                        const name = this.evaluate_name(token.name, scope);
+                        const name = evaluate_name(token.name);
                         const variable = scope.get(name) || scope.local(name);
 
                         if (variable.frozen) {
@@ -136,7 +130,7 @@ class AssemblerContext {
                         }
 
                         Object.assign(variable, {
-                            value: this.evaluate(token.value, scope),
+                            value: token.value,
                             location: token.location
                         });
                     }
@@ -144,9 +138,8 @@ class AssemblerContext {
 
                 case "EquateDirective":
                     {
-                        const name = this.evaluate_name(token.name, scope);
+                        const name = evaluate_name(token.name);
                         const variable = scope.get(name) || scope.global(name);
-                        const value = this.evaluate(token.value, scope);
 
                         if (variable.value) {
                             throw new Message(LEVEL_FAIL, token.location, `Cannot change frozen value ${name}`);
@@ -154,7 +147,7 @@ class AssemblerContext {
 
                         // Assign our value
                         Object.assign(variable, {
-                            value,
+                            value: token.value,
                             location: token.location,
                             frozen: true
                         });
@@ -163,7 +156,7 @@ class AssemblerContext {
 
                 case "LabelDirective":
                     {
-                        const name = this.evaluate_name(token.name, scope);
+                        const name = evaluate_name(token.name);
                         const variable = scope.get(name) || scope.local(name);
                         const value = {
                             type: "Fragment",
@@ -188,7 +181,7 @@ class AssemblerContext {
 
                 case "DefineDirective":
                     {
-                        const name = this.evaluate_name(token.name, scope);
+                        const name = evaluate_name(token.name);
 
                         if (scope.get(name)) {
                             throw new Message(LEVEL_ERROR, token.location, `${name} has already been declared`);
@@ -208,7 +201,7 @@ class AssemblerContext {
 
                 case "UndefineDirective":
                     {
-                        for (const name of token.names.map((n) => this.evaluate_name(n, scope))) {
+                        for (const name of token.names.map(evaluate_name)) {
                             const variable = scope.get(name);
 
                             // Warn on undefined values
@@ -228,10 +221,8 @@ class AssemblerContext {
                         let conditions = [];
 
                         for (const { test, body } of token.conditions) {
-                            const condition = this.evaluate(test, scope);
-
-                            if (this.isValueType(condition)) {
-                                if (this.asTruthy(condition)) {
+                            if (this.isValueType(test)) {
+                                if (this.asTruthy(test)) {
                                     // This is a stoping condition
                                     otherwise = body;
                                     break ;
@@ -243,7 +234,7 @@ class AssemblerContext {
 
                             // Evaluate body here
                             conditions.push({
-                                condition,
+                                test,
                                 ... await this.prospect(scope, body)
                             });
                         }
@@ -262,16 +253,16 @@ class AssemblerContext {
                             yield {
                                 type: "IfDirective",
                                 location: token.location,
-                                conditions: conditions.map(({condition, body}) => ({ condition, body })),
+                                conditions: conditions.map(({test, body}) => ({ test, body })),
                                 otherwise: (otherwise.length > 0) ? otherwise : null
                             };
 
                             // Prospect values
                             let block;
                             while (block = conditions.pop()) {
-                                const {shadow, condition} = block;
+                                const {shadow, test} = block;
 
-                                scope.prospect(condition, shadow, defaults);
+                                scope.prospect(test, shadow, defaults);
                                 defaults = scope;
                             }
                         } else if (otherwise) {
@@ -323,25 +314,6 @@ class AssemblerContext {
                 }
             }
         }
-
-        // Throw errors on undefined values
-        for (const name in scope.top) {
-            if (!scope.top.hasOwnProperty(name)) {
-                continue ;
-            }
-
-            const variable = scope.get(name);
-
-            if (!variable.used) {
-                if (!variable.value) {
-                    yield new Message(LEVEL_WARN, variable.location, `Unused identifier ${name}`);
-                } else {
-                    yield new Message(LEVEL_WARN, variable.location, `Local variable ${name} is defined, but is never used`);
-                }
-            } else if (!variable.value) {
-                yield new Message(LEVEL_FAIL, variable.location, `Local variable ${name} is used, but is never defined`);
-            }
-        }
     }
 
     async* include (target, module = 'text.loader.js') {
@@ -366,7 +338,7 @@ class AssemblerContext {
         this.parserSource = previous;
     }
 
-    process(scope, tree) {
+    async* process(scope, tree) {
         // Create a local scope
         scope = scope.nest();
 
@@ -375,7 +347,27 @@ class AssemblerContext {
         //tree = this.pass1(scope, tree);
         tree = lazy_evaluate_pass(scope, tree);
 
-        return tree;
+        // Pass through the results
+        yield* tree;
+
+        // We've finished up, now start complaining about floating values
+        for (const name in scope.top) {
+            if (!scope.top.hasOwnProperty(name)) {
+                continue ;
+            }
+
+            const variable = scope.get(name);
+
+            if (!variable.used) {
+                if (!variable.value) {
+                    yield new Message(LEVEL_WARN, variable.location, `Unused identifier ${name}`);
+                } else {
+                    yield new Message(LEVEL_WARN, variable.location, `Local variable ${name} is defined, but is never used`);
+                }
+            } else if (!variable.value) {
+                yield new Message(LEVEL_FAIL, variable.location, `Local variable ${name} is used, but is never defined`);
+            }
+        }
     }
 
     async assemble(path)
@@ -395,7 +387,7 @@ class AssemblerContext {
             }
 
             // This is for a future pass
-            //console.log(block);
+            console.log(block);
         }
     }
 }
