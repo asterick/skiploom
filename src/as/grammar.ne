@@ -58,7 +58,7 @@ source_line ->
       label:? directive:? eol
 
 label ->
-      symbol %colon {% ([name]) => ({ type: "LabelDirective", name, location:location(name) }) %}
+      expression %colon {% ([name]) => ({ type: "LabelDirective", name, location: name.location }) %}
 
 eol ->
       %comment:? %linefeed {% ignore %}

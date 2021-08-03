@@ -247,10 +247,12 @@ function flatten(ast, scope, guard = []) {
 
 function evaluate(scope, tree) {
     // Helper functions for arrays an falsy values
-    if (!tree) {
+    if (tree == null) {
         return tree;
     } else if (Array.isArray(tree)) {
         return tree.map((idx) => evaluate(scope, idx));
+    } else if (tree === undefined) {
+        throw "Attempted to evaluate an undefined field"
     }
 
     // Flatten our expression
@@ -265,7 +267,13 @@ async function* evaluate_pass(scope, tree) {
             case "IncludeDirective":
                 Object.assign(token, {
                     path: evaluate(scope, token.path),
-                    transform: evaluate(scope, token.transform),
+                    transform: evaluate(scope, token.transform)
+                });
+                break ;
+            case "AlignDirective":
+            case "RadixDirective":
+                Object.assign(token, {
+                    value: evaluate(scope, token.value)
                 });
                 break ;
             case "EndDirective":
@@ -276,44 +284,24 @@ async function* evaluate_pass(scope, tree) {
 
             // Variable Directives
             case "LocalDirective":
-                Object.assign(token, {
-                    names: evaluate(scope, token.names)
-                });
-                break ;
             case "GlobalDirective":
-                Object.assign(token, {
-                    names: evaluate(scope, token.names)
-                });
-                break ;
             case "ExternDirective":
+            case "UndefineDirective":
                 Object.assign(token, {
                     names: evaluate(scope, token.names)
                 });
                 break ;
             case "SetDirective":
-                Object.assign(token, {
-                    name: evaluate(scope, token.name),
-                    value: evaluate(scope, token.value)
-                });
-                break ;
             case "EquateDirective":
-                Object.assign(token, {
-                    name: evaluate(scope, token.name),
-                    value: evaluate(scope, token.value)
-                });
-                break ;
-            case "LabelDirective":
-                console.log(token);
-                break ;
             case "DefineDirective":
                 Object.assign(token, {
                     name: evaluate(scope, token.name),
                     value: evaluate(scope, token.value)
                 });
                 break ;
-            case "UndefineDirective":
+            case "LabelDirective":
                 Object.assign(token, {
-                    names: evaluate(scope, token.names)
+                    name: evaluate(scope, token.name)
                 });
                 break ;
             case "IfDirective":
@@ -321,6 +309,15 @@ async function* evaluate_pass(scope, tree) {
                     Object.assign(clause, {
                         test: evaluate(scope, clause.test)
                     });
+                });
+                break ;
+
+            // Display directives
+            case "MessageDirective":
+            case "WarningDirective":
+            case "FailureDirective":
+                Object.assign(token, {
+                    message: evaluate(scope, token.message)
                 });
                 break ;
 
@@ -333,15 +330,8 @@ async function* evaluate_pass(scope, tree) {
             //case "PurgeMacrosDirective":
             //case "ExitMacroDirective":
 
-            // Display directives
-            //case "MessageDirective":
-            //case "WarningDirective":
-            //case "FailureDirective":
-
             //case "DispatchDirective":
             //case "SectionDirective":
-            //case "AlignDirective":
-            //case "RadixDirective":
             //case "NameDirective":
             //case "AsciiBlockDirective":
             //case "TerminatedAsciiBlockDirective":

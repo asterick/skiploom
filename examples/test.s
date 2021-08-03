@@ -4,6 +4,11 @@
     EXTERN (CODE, SHORT) poopiedoop
     INCLUDE "./include.s" ;USING "text.transform.js"
 
+    MSG 1
+    WARN 2
+    FAIL 3
+some_label:
+
 ;TEST_M MACRO A, B, C, D
     ;LD A, I\A
     ;LD A, I\?B
