@@ -510,13 +510,28 @@ class AssemblerContext {
                             });
                         }
 
-                        if (otherwise) {
-                            otherwise = await this.prospect(scope, otherwise);
+                        if (conditions.length >= 1) {
+                            let defaults = scope;
+
+                            if (otherwise) {
+                                const { shadow, body } = await this.prospect(scope, otherwise);
+                                defaults = shadow;
+                                otherwise = body;
+                            }
+
+                            yield {
+                                type: "IfDirective",
+                                location: token.location,
+                                conditions: conditions.map(({condition, body}) => ({ condition, body })),
+                                otherwise: (otherwise.length > 0) ? otherwise : null
+                            };
+
+                            console.log(defaults);
+                            // TODO: PROSPECT
+                        } else if (otherwise) {
+                            // Simple case: Only one true condition
+                            yield* this.defer_evaluate(scope, this.pass1(scope, otherwise));
                         }
-
-                        console.log(conditions, otherwise);
-
-                        // TODO: PROSPECT
                     }
 
                     break ;

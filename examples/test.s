@@ -19,12 +19,17 @@
 
     B SET #01
 
+    IF 0
+        WARN "This does nothing"
+    ELSE
+        FAIL "This did something"
+    ENDIF
+
     IF A == 1
         B SET B + 02
         WARN B
     ELSEIF A == 2
         B SET B + 03
-        WARN B
     ELSEIF ""
         WARN C
     ELSE
