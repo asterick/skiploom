@@ -1,7 +1,7 @@
 class Scope {
     constructor (globals, top = null) {
         this.globals = globals;
-        this.top = top || globals;
+        this.top = top || Object.create(globals);
     }
 
     nest () {

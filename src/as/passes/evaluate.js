@@ -43,6 +43,8 @@ function asTruthy(ast) {
     }
 
 function flatten_unary(ast, scope, guard) {
+    const value = flatten(ast.value, scope, guard);
+
     throw ast;
 }
 
@@ -222,6 +224,7 @@ function flatten(ast, scope, propegate, guard = []) {
     // Variables
     case "Identifier":
         {
+            // We want the raw identifier
             if (!propegate) {
                 return ast;
             }
@@ -344,6 +347,13 @@ async function* evaluate_pass(scope, tree) {
             //case "DataAllocateDirective":
             //case "DefineSectionDirective":
                 console.log(token);
+                break ;
+
+            // Internal Object pass-throughs
+            case "Fragment":
+                yield token;
+                break ;
+
             default:
                 throw new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: evaluate) ${token.type}`);
                 break ;
@@ -379,6 +389,9 @@ async function* lazy_evaluate_pass(scope, feed) {
 }
 
 module.exports = {
+    isValueType,
+    asNumber, asString, asTruthy,
+
     evaluate_pass,
     lazy_evaluate_pass
 };

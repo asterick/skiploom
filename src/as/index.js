@@ -3,8 +3,17 @@ const path = require("path");
 const { resolve } = require("../util/resolve.js");
 const { expressionParser } = require("./parsers.js");
 const { Scope } = require("./scope.js");
-const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../util/logging.js");
-const { evaluate_pass, lazy_evaluate_pass } = require("./passes/evaluate.js");
+
+const {
+    LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
+    Message
+} = require ("../util/logging.js");
+
+const {
+    isValueType,
+    asNumber, asString, asTruthy,
+    evaluate_pass, lazy_evaluate_pass
+} = require("./passes/evaluate.js");
 
 /* This creates a namespace of defines */
 function defines(... pairs) {
@@ -48,18 +57,17 @@ function evaluate_name(ast) {
 }
 
 class AssemblerContext {
-    constructor(globals) {
+    constructor() {
         this.parserSource = {
             source: "command-line"
         };
 
-        this.globals = globals;
         this.incomplete = [];
     }
 
     async prospect(scope, ast) {
         const shadow = scope.preserve();
-        const pass = this.process(shadow, ast);
+        const pass = this.process(shadow.nest(), ast);
         const body = [];
 
         for await (const block of pass) {
@@ -75,19 +83,13 @@ class AssemblerContext {
      *   De-localize variables
      *   Perform Macros
      */
-    async* pass1(scope, feed) {
+    async* localize_pass(scope, feed) {
         for await (let token of feed) {
             try {
                 switch (token.type) {
                 // Assembly flow control
                 case "IncludeDirective":
-                    {
-                        if (token.transform) {
-                            yield* this.include(token.path.value, token.transform.value);
-                        } else {
-                            yield* this.include(token.path.value);
-                        }
-                    }
+                    yield* this.process(scope, this.include(asString(token.path), token.transform ? asString(token.transform) : undefined));
                     break ;
                 case "EndDirective":
                     yield token;
@@ -221,8 +223,8 @@ class AssemblerContext {
                         let conditions = [];
 
                         for (const { test, body } of token.conditions) {
-                            if (this.isValueType(test)) {
-                                if (this.asTruthy(test)) {
+                            if (isValueType(test)) {
+                                if (asTruthy(test)) {
                                     // This is a stoping condition
                                     otherwise = body;
                                     break ;
@@ -267,7 +269,7 @@ class AssemblerContext {
                             }
                         } else if (otherwise) {
                             // Simple case: Only one true condition
-                            yield* this.process(scope, otherwise);
+                            yield* this.process(scope.nest(), otherwise);
                         }
                     }
 
@@ -316,16 +318,16 @@ class AssemblerContext {
         }
     }
 
-    async* include (target, module = 'text.loader.js') {
+    async* include (target, loader_location = 'text.loader.js') {
         // Import our source transform
         const root = this.parserSource.path ? path.dirname(this.parserSource.path) : process.cwd();
-        const loader = require(await resolve(module));
+        const loader = require(await resolve(loader_location));
         const fn = await resolve(target, root);
 
         // Isolate our namespace
         const previous = this.parserSource;
         this.parserSource = {
-            source: module,
+            loader: loader_location,
             includedFrom: this.parserSource,
             path: fn
         };
@@ -339,12 +341,9 @@ class AssemblerContext {
     }
 
     async* process(scope, tree) {
-        // Create a local scope
-        scope = scope.nest();
-
         // Run through the various passes
         tree = evaluate_pass(scope, tree);
-        //tree = this.pass1(scope, tree);
+        tree = this.localize_pass(scope, tree);
         tree = lazy_evaluate_pass(scope, tree);
 
         // Pass through the results
@@ -370,9 +369,9 @@ class AssemblerContext {
         }
     }
 
-    async assemble(path)
+    async assemble(path, globals)
     {
-        const scope = new Scope({ ... this.globals });
+        const scope = new Scope({ ... globals });
 
         // Load our file
         const tree = this.include(path);
@@ -397,8 +396,8 @@ async function* assemble({ files, define }) {
 
     for (let fn of files) {
         // Create a new variable scope (protect globals)
-        const ctx = new AssemblerContext(globals);
-        await ctx.assemble(fn);
+        const ctx = new AssemblerContext();
+        await ctx.assemble(fn, globals);
         yield ctx;
     }
 }

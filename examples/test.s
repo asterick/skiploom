@@ -23,6 +23,7 @@ some_label:
     DEFINE Q 'bert'
 
     B SET #01
+    B SET B + 2
 
     IF 0
         WARN "This does nothing"
