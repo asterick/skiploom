@@ -325,7 +325,10 @@ class AssemblerContext {
 
                 case "IfDirective":
                     {
+                        const a = scope.preserve();
+                        const b = scope.preserve();
 
+                        scope.prospect(null, a, b);
                     }
 
                     break ;
@@ -350,6 +353,10 @@ class AssemblerContext {
                     break ;
 
                 // Macro Directives
+                //case "CountDupDirective":
+                //case "ListDupDirective":
+                //case "CharacterDupDirective":
+                //case "SequenceDupDirective":
                 //case "MacroDefinitionDirective":
                 //case "PurgeMacrosDirective":
                 case "ExitMacroDirective":
@@ -366,10 +373,6 @@ class AssemblerContext {
                 //case "DataBytesDirective":
                 //case "DataWordsDirective":
                 //case "DataAllocateDirective":
-                //case "CountDupDirective":
-                //case "ListDupDirective":
-                //case "CharacterDupDirective":
-                //case "SequenceDupDirective":
                 //case "DefineSectionDirective":
                 default:
                     yield new Message(LEVEL_FAIL, token.location, `Unhandled directive ${token.type}`);

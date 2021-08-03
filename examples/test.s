@@ -13,13 +13,13 @@
     ;TEST_M Z, Z, Z, Z
     GLOBAL A
     LOCAL  B
+    DEFINE Q 'bert'
 
     B SET #01
-    A EQU #02
 
-    IF 1
+    IF A == 1
         LD A, #00
-    ELSEIF 2
+    ELSEIF B == 1
         LD A, #01
     ELSE
         LD A, #02
