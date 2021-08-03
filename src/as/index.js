@@ -3,7 +3,8 @@ const path = require("path");
 const { resolve } = require("../util/resolve.js");
 const { expressionParser } = require("./parsers.js");
 const { Scope } = require("./scope.js");
-const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../logging.js");
+const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../util/logging.js");
+const { evaluate_pass, lazy_evaluate_pass } = require("./passes/evaluate.js");
 
 /* This creates a namespace of defines */
 function defines(... pairs) {
@@ -44,269 +45,7 @@ class AssemblerContext {
         };
 
         this.globals = globals;
-        this.radix = 10;
         this.incomplete = [];
-    }
-
-    /*
-     * Expression evaluation
-     */
-    isValueType(ast) {
-        return ast.type == "Number" || ast.type == "String";
-    }
-
-    asString(ast) {
-        switch (ast.type) {
-        case "String":
-            return ast.value;
-        case "Number":
-            return ast.value.toString();
-        default:
-            throw `Cannot coerse ${ast.type} to string`;
-        }
-    }
-
-    asNumber(ast) {
-        switch (ast.type) {
-        case "Number":
-            return ast.value;
-        default:
-            throw `Cannot coerse ${ast.type} to number`;
-        }
-    }
-
-    asTruthy(ast) {
-        switch (ast.type) {
-            case "Number":
-                return ast.value != 0;
-            case "String":
-                return ast.value !== "";
-            default:
-                throw `Cannot coerse ${ast.type} to number`;
-            }
-        }
-
-    flatten_unary(ast, scope, guard) {
-        throw ast;
-    }
-
-    flatten_binary(ast, scope, guard) {
-        const left = this.flatten(ast.left, scope, guard);
-        const right = this.flatten(ast.right, scope, guard);
-
-        // These pre-empt
-        if (!this.isValueType(left)) {
-            return { ... ast, left, right };
-        }
-
-        switch (ast.op) {
-            case "LogicalOr":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asTruthy(left) ? left : right
-                };
-
-            case "LogicalAnd":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: !this.asTruthy(left) ? left : right
-                };
-        }
-
-        if (!this.isValueType(right)) {
-            return { ... ast, left, right };
-        }
-
-        switch (ast.op) {
-            case "Concatinate":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asString(left) + this.asString(right)
-                };
-
-            case "BitwiseOr":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asNumber(left) | this.asNumber(right)
-                };
-
-            case "BitwiseXor":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asNumber(left) ^ this.asNumber(right)
-                };
-
-            case "BitwiseAnd":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asNumber(left) & this.asNumber(right)
-                };
-
-
-            case "Equal":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: left.value === right.value
-                };
-
-            case "NotEqual":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: left.value !== right.value
-                };
-            case "Greater":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: left.value > right.value
-                };
-            case "Less":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: left.value < right.value
-                };
-            case "GreaterEqual":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: left.value >= right.value
-                };
-            case "LessEqual":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: left.value <= right.value
-                };
-
-            case "ShiftLeft":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: left.value << right.value
-                };
-
-            case "ShiftRight":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: left.value >> right.value
-                };
-
-            case "Add":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asNumber(left) + this.asNumber(right)
-                };
-
-            case "Subtract":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asNumber(left) - this.asNumber(right)
-                };
-
-            case "Multiply":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asNumber(left) * this.asNumber(right)
-                };
-
-            case "Divide":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asNumber(left) / this.asNumber(right)
-                };
-
-            case "Modulo":
-                return {
-                    type: "Number",
-                    location: ast.location,
-                    value: this.asNumber(left) % this.asNumber(right)
-                };
-
-            default:
-                throw `TODO: ${ast.op}`;
-        }
-    }
-
-    flatten(ast, scope, guard = []) {
-        switch (ast.type) {
-        // Value types
-        case "Fragment":
-        case "String":
-            return ast;
-        case "Number":
-            if (typeof ast.value == "number") {
-                return ast;
-            } else if (typeof ast.value == "string") {
-                return { ... ast, value: parseInt(ast.value, this.radix) };
-            } else {
-                throw new Message(LEVEL_FAIL, ast.location, `Invalid number value: ${ast.value}`);
-            }
-
-        // Operators
-        case "UnaryOperation":
-            return this.flatten_unary(ast, scope, guard);
-        case "BinaryOperation":
-            return this.flatten_binary(ast, scope, guard);
-        // TODO: TERNARY
-
-        // Variables
-        case "Identifier":
-            {
-                // Detect circular reference
-                if (guard.indexOf(ast.name) >= 0) {
-                    throw new Message(LEVEL_FATAL, ast.location, `Circular reference ${guard.join("->")}->${ast.name}`);
-                }
-
-                const variable = scope.get(ast.name) || scope.local(ast.name);
-                variable.used = true;
-
-                // Implied forward decl
-                if (!variable.value) {
-                    variable.frozen = true;
-                    return ast;
-                }
-
-                // Bubble up name (deferred values are implicitly named)
-                return { name:ast.name, ... this.flatten(scope.get(ast.name).value, scope, guard.concat(ast.name)) };
-            }
-
-        default:
-            throw new Message(LEVEL_FAIL, ast.location, `Unknown expression type: ${ast.type}`);
-        }
-    }
-
-    evaluate(ast, scope, defer = true) {
-        const value = this.flatten(ast, scope);
-
-        switch (value.type) {
-            case "Number":
-            case "String":
-            case "Fragment":
-                break ;
-            default:
-                if (defer) {
-                    this.incomplete.push(value);
-                } else {
-                    throw new Message(LEVEL_FAIL, ast.location, "Cannot defer evaluation for this statement");
-                }
-                break ;
-        }
-
-        return value;
     }
 
     evaluate_name(ast, scope) {
@@ -326,7 +65,7 @@ class AssemblerContext {
 
     async prospect(scope, ast) {
         const shadow = scope.preserve();
-        const pass = this.defer_evaluate(shadow, this.pass1(shadow.scope(), ast));
+        const pass = this.process(shadow, ast);
         const body = [];
 
         for await (const block of pass) {
@@ -349,16 +88,15 @@ class AssemblerContext {
                 // Assembly flow control
                 case "IncludeDirective":
                     {
-                        const path = this.evaluate(token.path, scope, false);
                         if (token.transform) {
-                            const transform = this.evaluate(token.transform, scope, false);
-                            yield* this.include(path.value, transform.value);
+                            yield* this.include(token.path.value, token.transform.value);
                         } else {
-                            yield* this.include(path.value);
+                            yield* this.include(token.path.value);
                         }
                     }
                     break ;
                 case "EndDirective":
+                    // This Ter
                     break ;
 
                 // Variable Directives
@@ -538,7 +276,7 @@ class AssemblerContext {
                             }
                         } else if (otherwise) {
                             // Simple case: Only one true condition
-                            yield* this.defer_evaluate(scope, this.pass1(scope.scope(), otherwise));
+                            yield* this.process(scope, otherwise);
                         }
                     }
 
@@ -606,45 +344,13 @@ class AssemblerContext {
         }
     }
 
-    async* defer_evaluate(scope, feed) {
-        let blocks = [];
-
-        for await (let block of feed) {
-            if (block instanceof Message) {
-                yield block;
-                continue ;
-            }
-
-            blocks.push(block);
-        }
-
-        // Reevaluate local deferred
-        let exp;
-        while (exp = this.incomplete.shift()) {
-            try {
-                Object.assign(exp, this.flatten(exp, scope));
-            } catch (msg) {
-                if (msg instanceof Message) {
-                    yield msg;
-                    if (msg.level == LEVEL_FATAL) return ;
-                } else if(msg instanceof Error) {
-                    throw msg;
-                } else {
-                    yield new Message(LEVEL_FAIL, token.location, msg);
-                }
-            }
-        }
-
-        for (let block of blocks) {
-            yield block;
-        }
-    }
-
     async* include (target, module = 'text.loader.js') {
         // Import our source transform
         const root = this.parserSource.path ? path.dirname(this.parserSource.path) : process.cwd();
         const loader = require(await resolve(module));
         const fn = await resolve(target, root);
+
+        console.log(target)
 
         // Isolate our namespace
         const previous = this.parserSource;
@@ -662,15 +368,27 @@ class AssemblerContext {
         this.parserSource = previous;
     }
 
+    process(scope, tree) {
+        // Create a local scope
+        scope = scope.nest();
+
+        // Run through the various passes
+        tree = evaluate_pass(scope, tree);
+        //tree = this.pass1(scope, tree);
+        tree = lazy_evaluate_pass(scope, tree);
+
+        return tree;
+    }
+
     async assemble(path)
     {
         const scope = new Scope({ ... this.globals });
 
-        // Start with first pass assembler
-        const feed = this.include(path);
-        const phase1 = this.defer_evaluate(scope, this.pass1(scope, feed));
+        // Load our file
+        const tree = this.include(path);
 
-        for await (let block of phase1) {
+        // Begin processing file
+        for await (let block of this.process(scope, tree)) {
             // Emitted a log message
             if (block instanceof Message) {
                 console.log(block.toString());

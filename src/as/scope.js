@@ -1,12 +1,10 @@
-const { Message } = require("../logging");
-
 class Scope {
     constructor (globals, top = null) {
         this.globals = globals;
-        this.top = top || Object.create(globals);
+        this.top = top || globals;
     }
 
-    scope () {
+    nest () {
         return new Scope(this.globals, Object.create(this.top));
     }
 

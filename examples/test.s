@@ -1,7 +1,7 @@
     ;Z EQU 192
     ;INFO 192 + 256
 
-    ;INCLUDE "./include.s" ;USING "text.transform.js"
+    INCLUDE "./include.s" ;USING "text.transform.js"
 
 ;TEST_M MACRO A, B, C, D
     ;LD A, I\A
@@ -11,7 +11,6 @@
     ;ENDM
 
     ;TEST_M Z, Z, Z, Z
-
 
     GLOBAL A
     LOCAL  B
