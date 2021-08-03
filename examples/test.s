@@ -1,6 +1,7 @@
     ;Z EQU 192
     ;INFO 192 + 256
 
+    EXTERN (CODE, SHORT) poopiedoop
     INCLUDE "./include.s" ;USING "text.transform.js"
 
 ;TEST_M MACRO A, B, C, D

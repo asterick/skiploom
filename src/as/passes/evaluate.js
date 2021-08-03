@@ -245,30 +245,16 @@ function flatten(ast, scope, guard = []) {
     }
 }
 
-function evaluate(scope, tree, defer = true) {
+function evaluate(scope, tree) {
     // Helper functions for arrays an falsy values
-    if (Array.isArray(tree)) {
-        return tree.map((idx) => evaluate(scope, idx, defer));
-    } else if (!tree) {
+    if (!tree) {
         return tree;
+    } else if (Array.isArray(tree)) {
+        return tree.map((idx) => evaluate(scope, idx));
     }
 
     // Flatten our expression
-    const value = flatten(tree, scope);
-
-    switch (value.type) {
-        case "Number":
-        case "String":
-        case "Fragment":
-            break ;
-        default:
-            if (!defer) {
-                throw new Message(LEVEL_FAIL, tree.location, "Cannot defer evaluation for statement");
-            }
-            break ;
-    }
-
-    return value;
+    return flatten(tree, scope);
 }
 
 async function* evaluate_pass(scope, tree) {
@@ -289,15 +275,54 @@ async function* evaluate_pass(scope, tree) {
                 return ;
 
             // Variable Directives
-            //case "LocalDirective":
-            //case "GlobalDirective":
-            //case "ExternDirective":
-            //case "SetDirective":
-            //case "EquateDirective":
-            //case "LabelDirective":
-            //case "DefineDirective":
-            //case "UndefineDirective":
-            //case "IfDirective":
+            case "LocalDirective":
+                Object.assign(token, {
+                    names: evaluate(scope, token.names)
+                });
+                break ;
+            case "GlobalDirective":
+                Object.assign(token, {
+                    names: evaluate(scope, token.names)
+                });
+                break ;
+            case "ExternDirective":
+                Object.assign(token, {
+                    names: evaluate(scope, token.names)
+                });
+                break ;
+            case "SetDirective":
+                Object.assign(token, {
+                    name: evaluate(scope, token.name),
+                    value: evaluate(scope, token.value)
+                });
+                break ;
+            case "EquateDirective":
+                Object.assign(token, {
+                    name: evaluate(scope, token.name),
+                    value: evaluate(scope, token.value)
+                });
+                break ;
+            case "LabelDirective":
+                console.log(token);
+                break ;
+            case "DefineDirective":
+                Object.assign(token, {
+                    name: evaluate(scope, token.name),
+                    value: evaluate(scope, token.value)
+                });
+                break ;
+            case "UndefineDirective":
+                Object.assign(token, {
+                    names: evaluate(scope, token.names)
+                });
+                break ;
+            case "IfDirective":
+                token.conditions.forEach((clause) => {
+                    Object.assign(clause, {
+                        test: evaluate(scope, clause.test)
+                    });
+                });
+                break ;
 
             // Macro Directives
             //case "CountDupDirective":

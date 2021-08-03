@@ -350,8 +350,6 @@ class AssemblerContext {
         const loader = require(await resolve(module));
         const fn = await resolve(target, root);
 
-        console.log(target)
-
         // Isolate our namespace
         const previous = this.parserSource;
         this.parserSource = {
