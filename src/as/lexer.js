@@ -41,7 +41,7 @@ const keywords = {
         "CALLS","SYMB","ALIGN","COMMENT","DEFINE","DEFSECT","END","FAIL","INCLUDE",
         "MSG","RADIX","SECT","UNDEF","WARN","EQU","EXTERN","GLOBAL","LOCAL","NAME",
         "SET","ASCII","ASCIZ","DB","DS","DW","DUP","DUPA","DUPC","DUPF","ENDIF",
-        "ENDM","EXITM","IF","MACRO","PMACRO","USING","ELSEIF",
+        "ENDM","EXITM","IF","MACRO","PMACRO","USING","ELSEIF","ELSE"
     ]
 };
 

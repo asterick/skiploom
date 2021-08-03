@@ -119,8 +119,7 @@ class Scope {
                 // Condition: Only one defined
                 //     'DEFINE': Include 'undefined' marker in tuple tree
                 //     Other: Failure
-
-                // TODO
+                throw "PROSPECTING DOES NOT YET EXIST";
             }
 
             // Continue up the tree

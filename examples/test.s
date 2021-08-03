@@ -11,6 +11,8 @@
     ;ENDM
 
     ;TEST_M Z, Z, Z, Z
+
+
     GLOBAL A
     LOCAL  B
     DEFINE Q 'bert'
@@ -18,9 +20,9 @@
     B SET #01
 
     IF A == 1
-        LD A, #00
-    ELSEIF B == 1
-        LD A, #01
+        B SET B + 02
+    ELSEIF A == 2
+        B SET B + 03
     ELSE
-        LD A, #02
+        B SET B + 04
     ENDIF

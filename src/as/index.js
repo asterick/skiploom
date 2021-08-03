@@ -51,32 +51,184 @@ class AssemblerContext {
     /*
      * Expression evaluation
      */
+    isValueType(ast) {
+        return ast.type == "Number" || ast.type == "String";
+    }
+
+    asString(ast) {
+        switch (ast.type) {
+        case "String":
+            return ast.value;
+        case "Number":
+            return ast.value.toString();
+        default:
+            throw `Cannot coerse ${ast.type} to string`;
+        }
+    }
+
+    asNumber(ast) {
+        switch (ast.type) {
+        case "Number":
+            return ast.value;
+        default:
+            throw `Cannot coerse ${ast.type} to number`;
+        }
+    }
+
+    asTruthy(ast) {
+        switch (ast.type) {
+            case "Number":
+                return ast.value != 0;
+            case "String":
+                return ast.value !== "";
+            default:
+                throw `Cannot coerse ${ast.type} to number`;
+            }
+        }
+
     flatten_unary(ast, scope, guard) {
-        throw "TODO"
+        throw ast;
     }
 
     flatten_binary(ast, scope, guard) {
+        const left = this.flatten(ast.left, scope, guard);
+        const right = this.flatten(ast.right, scope, guard);
+
+        if (!this.isValueType(left) || !this.isValueType(right)) {
+            return { ... ast, left, right };
+        }
+
         switch (ast.op) {
-            case "LogicalOr":
-            case "LogicalAnd":
-            case "BitwiseOr":
-            case "BitwiseXor":
-            case "BitwiseAnd":
-            case "Equal":
-            case "NotEqual":
-            case "Greater":
-            case "Less":
-            case "GreaterEqual":
-            case "LessEqual":
-            case "ShiftLeft":
-            case "ShiftRight":
             case "Concatinate":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asString(left) + this.asString(right)
+                };
+
+            case "LogicalOr":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asNumber(left) || this.asNumber(right)
+                };
+
+            case "LogicalAnd":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asNumber(left) && this.asNumber(right)
+                };
+
+            case "BitwiseOr":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asNumber(left) | this.asNumber(right)
+                };
+
+            case "BitwiseXor":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asNumber(left) ^ this.asNumber(right)
+                };
+
+            case "BitwiseAnd":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asNumber(left) & this.asNumber(right)
+                };
+
+
+            case "Equal":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: left.value === right.value
+                };
+
+            case "NotEqual":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: left.value !== right.value
+                };
+            case "Greater":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: left.value > right.value
+                };
+            case "Less":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: left.value < right.value
+                };
+            case "GreaterEqual":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: left.value >= right.value
+                };
+            case "LessEqual":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: left.value <= right.value
+                };
+
+            case "ShiftLeft":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: left.value << right.value
+                };
+
+            case "ShiftRight":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: left.value >> right.value
+                };
+
             case "Add":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asNumber(left) + this.asNumber(right)
+                };
+
             case "Subtract":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asNumber(left) - this.asNumber(right)
+                };
+
             case "Multiply":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asNumber(left) * this.asNumber(right)
+                };
+
             case "Divide":
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asNumber(left) / this.asNumber(right)
+                };
+
             case "Modulo":
-                break ;
+                return {
+                    type: "Number",
+                    location: ast.location,
+                    value: this.asNumber(left) % this.asNumber(right)
+                };
+
             default:
                 throw `TODO: ${ast.op}`;
         }
@@ -84,16 +236,10 @@ class AssemblerContext {
 
     flatten(ast, scope, guard = []) {
         switch (ast.type) {
+        // Value types
         case "Fragment":
         case "String":
             return ast;
-
-        case "UnaryOperation":
-            return this.flatten_unary(ast, scope, guard);
-
-        case "BinaryOperation":
-            return this.flatten_binary(ast, scope, guard);
-
         case "Number":
             if (typeof ast.value == "number") {
                 return ast;
@@ -103,6 +249,13 @@ class AssemblerContext {
                 throw new Message(LEVEL_FAIL, ast.location, `Invalid number value: ${ast.value}`);
             }
 
+        // Operators
+        case "UnaryOperation":
+            return this.flatten_unary(ast, scope, guard);
+        case "BinaryOperation":
+            return this.flatten_binary(ast, scope, guard);
+
+        // Variables
         case "Identifier":
             {
                 // Detect circular reference
@@ -161,18 +314,6 @@ class AssemblerContext {
         }
 
         return condensed.name;
-    }
-
-    evaluate_value(ast, scope) {
-        let condensed = this.evaluate(ast, scope, false);
-
-        if (condensed.type == "String") {
-            return condensed.value;
-        } else if (condensed.type == "Number") {
-            return condensed.value.toString();
-        } else {
-            return null;
-        }
     }
 
     /*
@@ -325,31 +466,39 @@ class AssemblerContext {
 
                 case "IfDirective":
                     {
-                        const a = scope.preserve();
-                        const b = scope.preserve();
+                        console.log(token);
 
-                        scope.prospect(null, a, b);
+                        let otherwise = token.otherwise;
+
+                        for (const { test, body } of token.conditions) {
+                            const condition = this.evaluate(test, scope);
+
+                            if (this.isValueType(condition)) {
+                                console.log(this.asTruthy(condition));
+                                if (this.asTruthy(condition)) {
+                                    // This is a stoping condition
+                                    otherwise = body;
+                                    break ;
+                                } else {
+                                    // Discard false statement
+                                    continue ;
+                                }
+                            }
+
+                            // Evaluate body here
+                            const shadow = scope.preserve().scope();
+                            const pass = this.defer_evaluate(shadow, this.pass1(shadow, body));
+                            for await (const block of pass) {
+                                console.log(block);
+                            }
+                        }
+
+                        if (otherwise) {
+                            // Do otherwise
+                        }
+
                     }
 
-                    break ;
-
-                // Display directives
-                case "MessageDirective":
-                    yield new Message(LEVEL_INFO, token.location, token.message.map((exp) => {
-                        let result = this.evaluate(exp, scope)
-
-                        if (result.type == "Number" || result.type == "String") {
-                            return result.value.toString();
-                        } else  {
-                            throw new Message(LEVEL_ERROR, exp.location, "Expression does not evaluate to a string");
-                        }
-                    }).join(" "));
-                    break ;
-                case "WarningDirective":
-                    yield new Message(LEVEL_WARN, token.location, token.message.map((exp) => this.evaluate_string(exp, scope)).join(" "));
-                    break ;
-                case "FailureDirective":
-                    yield new Message(LEVEL_FAIL, token.location, token.message.map((exp) => this.evaluate_string(exp, scope)).join(" "));
                     break ;
 
                 // Macro Directives
@@ -362,6 +511,11 @@ class AssemblerContext {
                 case "ExitMacroDirective":
                     yield new Message(LEVEL_FAIL, token.location, "Misplaced EXITM, Must be used inside of a macro");
                     break ;
+
+                // Display directives
+                //case "MessageDirective":
+                //case "WarningDirective":
+                //case "FailureDirective":
 
                 //case "DispatchDirective":
                 //case "SectionDirective":
@@ -471,7 +625,7 @@ class AssemblerContext {
 
         // Start with first pass assembler
         const feed = this.include(path);
-        const phase1 =  this.defer_evaluate(scope, this.pass1(scope, feed));
+        const phase1 = this.defer_evaluate(scope, this.pass1(scope, feed));
 
         for await (let block of phase1) {
             // Emitted a log message
