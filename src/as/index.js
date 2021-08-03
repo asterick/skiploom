@@ -325,8 +325,8 @@ class AssemblerContext {
     }
 
     async prospect(scope, ast) {
-        const shadow = scope.preserve().scope();
-        const pass = this.defer_evaluate(shadow, this.pass1(shadow, ast));
+        const shadow = scope.preserve();
+        const pass = this.defer_evaluate(shadow, this.pass1(shadow.scope(), ast));
         const body = [];
 
         for await (const block of pass) {
@@ -513,24 +513,42 @@ class AssemblerContext {
                         if (conditions.length >= 1) {
                             let defaults = scope;
 
+                            // We need a fallback clause
                             if (otherwise) {
                                 const { shadow, body } = await this.prospect(scope, otherwise);
                                 defaults = shadow;
                                 otherwise = body;
                             }
 
+                            // Prospect values
+                            let block;
+                            while (block = conditions.pop()) {
+                                const {shadow, condition} = block;
+
+                                scope.prospect(condition, shadow, defaults);
+                                defaults = scope;
+                            }
+
+                            // Trim up bottom as clauses are unneeded
+                            if (!otherwise || otherwise.length == 0) {
+                                otherwise = null;
+
+                                while (conditions[conditions.length - 1].body.lenght == 0) {
+                                    conditions.pop();
+                                }
+                            }
+                            console.log(scope.toString());
+
+                            // Emit newly localized IF directive
                             yield {
                                 type: "IfDirective",
                                 location: token.location,
                                 conditions: conditions.map(({condition, body}) => ({ condition, body })),
                                 otherwise: (otherwise.length > 0) ? otherwise : null
                             };
-
-                            console.log(defaults);
-                            // TODO: PROSPECT
                         } else if (otherwise) {
                             // Simple case: Only one true condition
-                            yield* this.defer_evaluate(scope, this.pass1(scope, otherwise));
+                            yield* this.defer_evaluate(scope, this.pass1(scope.scope(), otherwise));
                         }
                     }
 

@@ -111,14 +111,28 @@ class Scope {
             }
 
             for (const name of names) {
-                // Condition: Both defined
-                //     values match (no tuple, simply set)
-                //     values differ (tuple on condition)
-                // Condition: Both undefined (delete in current scope unconditionally)
-                // Condition: Only one defined
-                //     'DEFINE': Include 'undefined' marker in tuple tree
-                //     Other: Failure
-                throw "PROSPECTING DOES NOT YET EXIST";
+                const true_val = onTrue[name] && onTrue[name].value;
+                const false_val = onFalse[name] && onFalse[name].value;
+
+                if (true_val && false_val) {
+                    // If the value has changed, We need to setup a conditional
+                    if (here[name].value != true_val || true_val != false_val) {
+                        // This has no location yet
+                        here[name].value = {
+                            type: "TernaryOperator",
+                            condition,
+                            onTrue: onTrue[name].value,
+                            onFalse: onFalse[name].value,
+                        }
+                    }
+                } else if (!true_val && !false_val) {
+                    // Both sides were undefined
+                    delete here[name];
+                } else if (!true_val) {
+                    throw "TODO: Need to detect unbalanced defines"
+                } else if (!false_val) {
+                    throw "TODO: Need to detect unbalanced defines"
+                }
             }
 
             // Continue up the tree
@@ -126,6 +140,15 @@ class Scope {
             onTrue = Object.getPrototypeOf(onTrue);
             onFalse = Object.getPrototypeOf(onFalse);
         } while (here != Object.prototype);
+    }
+
+    toString() {
+        let top = this.top;
+
+        do {
+            Object.entries(top).forEach(([name, entry]) => console.log(name, entry.value));
+            top = Object.getPrototypeOf(top);
+        } while (top != Object.prototype);
     }
 }
 
