@@ -3,7 +3,6 @@ const fs = require('fs').promises;
 
 // Export AST chunks
 async function* defaultLoader(path) {
-    console.log(path)
     // Parse our sourcecode
     const parser = sourceParser();
     parser.feed(await fs.readFile(path, { encoding: 'utf-8' }));

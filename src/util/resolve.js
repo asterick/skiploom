@@ -5,7 +5,7 @@ const path = require("path");
 const searchPaths = [path.join(__dirname, '../loaders')];
 
 async function resolve(fn, relative) {
-    // These are
+    // These are relative to current path
     if (fn[0] == '.') {
         return path.join(relative, fn);
     }

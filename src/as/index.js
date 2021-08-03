@@ -52,7 +52,6 @@ class AssemblerContext {
      * Expression evaluation
      */
     flatten_unary(ast, scope, guard) {
-        console.log(ast);
         throw "TODO"
     }
 
@@ -99,9 +98,7 @@ class AssemblerContext {
             if (typeof ast.value == "number") {
                 return ast;
             } else if (typeof ast.value == "string") {
-                const copy = { ... ast };
-                copy.value = parseInt(ast.value, this.radix);
-                return copy;
+                return { ... ast, value: parseInt(ast.value, this.radix) };
             } else {
                 throw new Message(LEVEL_FAIL, ast.location, `Invalid number value: ${ast.value}`);
             }
@@ -179,7 +176,10 @@ class AssemblerContext {
     }
 
     /*
-     * First pass assembler
+     * First pass assembler:
+     *   Handle include
+     *   De-localize variables
+     *   Perform Macros
      */
     async* pass1(scope, feed) {
         for await (let token of feed) {
@@ -187,14 +187,18 @@ class AssemblerContext {
                 switch (token.type) {
                 // Assembly flow control
                 case "IncludeDirective":
-                    if (token.transform) {
-                        yield* this.include(token.path.value, token.transform.value);
-                    } else {
-                        yield* this.include(token.path.value);
+                    {
+                        const path = this.evaluate(token.path, scope, false);
+                        if (token.transform) {
+                            const transform = this.evaluate(token.transform, scope, false);
+                            yield* this.include(path.value, transform.value);
+                        } else {
+                            yield* this.include(path.value);
+                        }
                     }
                     break ;
                 case "EndDirective":
-                    return ;
+                    break ;
 
                 // Variable Directives
                 case "LocalDirective":
@@ -286,13 +290,12 @@ class AssemblerContext {
                 case "DefineDirective":
                     {
                         const name = this.evaluate_name(token.name, scope);
-                        const variable = scope.get(name) || scope.global(name);
 
-                        if (variable.value) {
-                            throw new Message(LEVEL_FAIL, token.location, `Cannot change frozen value ${name}`);
-                        } else if (variable.used) {
-                            throw new Message(LEVEL_FAIL, token.location, `Defines may not be deferred ${name}`);
+                        if (scope.get(name)) {
+                            throw new Message(LEVEL_ERROR, token.location, `${name} has already been declared`);
                         }
+
+                        const variable = scope.global(name);
 
                         // Assign our value
                         Object.assign(variable, {
@@ -315,10 +318,16 @@ class AssemblerContext {
                                 continue ;
                             }
 
-                            // Delete reference
-                            scope.remove(name);
+                            variable.remove(name);
                         }
                     }
+                    break ;
+
+                case "IfDirective":
+                    {
+
+                    }
+
                     break ;
 
                 // Display directives
@@ -361,7 +370,6 @@ class AssemblerContext {
                 //case "ListDupDirective":
                 //case "CharacterDupDirective":
                 //case "SequenceDupDirective":
-                //case "IfDirective":
                 //case "DefineSectionDirective":
                 default:
                     yield new Message(LEVEL_FAIL, token.location, `Unhandled directive ${token.type}`);
@@ -454,18 +462,13 @@ class AssemblerContext {
         this.parserSource = previous;
     }
 
-    async* localize(scope) {
-        // TODO
-    }
-
     async assemble(path)
     {
         const scope = new Scope({ ... this.globals });
 
         // Start with first pass assembler
         const feed = this.include(path);
-        //const phase1 =  this.defer_evaluate(scope, this.pass1(scope, feed));
-        const phase1 = feed;
+        const phase1 =  this.defer_evaluate(scope, this.pass1(scope, feed));
 
         for await (let block of phase1) {
             // Emitted a log message
@@ -475,13 +478,8 @@ class AssemblerContext {
                 continue ;
             }
 
-            // End directive (ignore everything that comes next)
-            if (block.type == "EndDirective") {
-                break ;
-            }
-
             // This is for a future pass
-            console.log(block);
+            //console.log(block);
         }
     }
 }
