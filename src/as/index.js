@@ -537,8 +537,6 @@ class AssemblerContext {
                                     conditions.pop();
                                 }
                             }
-                            console.log(scope.toString());
-
                             // Emit newly localized IF directive
                             yield {
                                 type: "IfDirective",

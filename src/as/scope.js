@@ -141,15 +141,6 @@ class Scope {
             onFalse = Object.getPrototypeOf(onFalse);
         } while (here != Object.prototype);
     }
-
-    toString() {
-        let top = this.top;
-
-        do {
-            Object.entries(top).forEach(([name, entry]) => console.log(name, entry.value));
-            top = Object.getPrototypeOf(top);
-        } while (top != Object.prototype);
-    }
 }
 
 module.exports = {
