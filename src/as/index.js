@@ -520,6 +520,14 @@ class AssemblerContext {
                                 otherwise = body;
                             }
 
+                            // Emit newly localized IF directive
+                            yield {
+                                type: "IfDirective",
+                                location: token.location,
+                                conditions: conditions.map(({condition, body}) => ({ condition, body })),
+                                otherwise: (otherwise.length > 0) ? otherwise : null
+                            };
+
                             // Prospect values
                             let block;
                             while (block = conditions.pop()) {
@@ -528,22 +536,6 @@ class AssemblerContext {
                                 scope.prospect(condition, shadow, defaults);
                                 defaults = scope;
                             }
-
-                            // Trim up bottom as clauses are unneeded
-                            if (!otherwise || otherwise.length == 0) {
-                                otherwise = null;
-
-                                while (conditions[conditions.length - 1].body.lenght == 0) {
-                                    conditions.pop();
-                                }
-                            }
-                            // Emit newly localized IF directive
-                            yield {
-                                type: "IfDirective",
-                                location: token.location,
-                                conditions: conditions.map(({condition, body}) => ({ condition, body })),
-                                otherwise: (otherwise.length > 0) ? otherwise : null
-                            };
                         } else if (otherwise) {
                             // Simple case: Only one true condition
                             yield* this.defer_evaluate(scope, this.pass1(scope.scope(), otherwise));
