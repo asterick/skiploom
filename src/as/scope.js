@@ -86,7 +86,7 @@ class Scope {
     }
 
     // Conditionally combine mirrored scopes
-    prospect(condition, left, right) {
+    prospect(test, left, right) {
         // Walk up our prototype chain
 
         let here = this.top;
@@ -117,8 +117,8 @@ class Scope {
                     if (here[name].value != true_val || true_val != false_val) {
                         // This has no location yet
                         here[name].value = {
-                            type: "TernaryOperator",
-                            condition,
+                            type: "TernaryOperation",
+                            test,
                             onTrue: onTrue[name].value,
                             onFalse: onFalse[name].value,
                         }

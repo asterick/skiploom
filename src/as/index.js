@@ -11,7 +11,7 @@ const {
 
 const {
     isValueType,
-    asNumber, asString, asTruthy,
+    asName, asNumber, asString, asTruthy,
     evaluate_pass, lazy_evaluate_pass
 } = require("./passes/evaluate.js");
 
@@ -47,15 +47,6 @@ function uuid() {
     return "some-uuid";
 }
 
-function evaluate_name(ast) {
-    // Short cut evaluate
-    if (!ast.name) {
-        throw new Message(LEVEL_FAIL, ast.location, "Expression did not evaluate to an identifier");
-    }
-
-    return ast.name;
-}
-
 class AssemblerContext {
     constructor() {
         this.parserSource = {
@@ -85,6 +76,11 @@ class AssemblerContext {
      */
     async* localize_pass(scope, feed) {
         for await (let token of feed) {
+            if (token instanceof Message) {
+                yield token;
+                continue ;
+            }
+
             try {
                 switch (token.type) {
                 // Assembly flow control
@@ -97,17 +93,17 @@ class AssemblerContext {
 
                 // Variable Directives
                 case "LocalDirective":
-                    for (const name of token.names.map(evaluate_name)) {
+                    for (const name of token.names.map(asName)) {
                         scope.local(name).location = token.location;
                     }
                     break ;
                 case "GlobalDirective":
-                    for (const name of token.names.map(evaluate_name)) {
+                    for (const name of token.names.map(asName)) {
                         scope.global(name).location = token.location;
                     }
                     break ;
                 case "ExternDirective":
-                    for (const name of token.names.map(evaluate_name)) {
+                    for (const name of token.names.map(asName)) {
                         const variable = scope.global(name);
                         variable.location = token.locaiton;
 
@@ -124,7 +120,7 @@ class AssemblerContext {
 
                 case "SetDirective":
                     {
-                        const name = evaluate_name(token.name);
+                        const name = asName(token.name);
                         const variable = scope.get(name) || scope.local(name);
 
                         if (variable.frozen) {
@@ -140,7 +136,7 @@ class AssemblerContext {
 
                 case "EquateDirective":
                     {
-                        const name = evaluate_name(token.name);
+                        const name = asName(token.name);
                         const variable = scope.get(name) || scope.global(name);
 
                         if (variable.value) {
@@ -158,7 +154,7 @@ class AssemblerContext {
 
                 case "LabelDirective":
                     {
-                        const name = evaluate_name(token.name);
+                        const name = asName(token.name);
                         const variable = scope.get(name) || scope.local(name);
                         const value = {
                             type: "Fragment",
@@ -183,7 +179,7 @@ class AssemblerContext {
 
                 case "DefineDirective":
                     {
-                        const name = evaluate_name(token.name);
+                        const name = asName(token.name);
 
                         if (scope.get(name)) {
                             throw new Message(LEVEL_ERROR, token.location, `${name} has already been declared`);
@@ -203,7 +199,7 @@ class AssemblerContext {
 
                 case "UndefineDirective":
                     {
-                        for (const name of token.names.map(evaluate_name)) {
+                        for (const name of token.names.map(asName)) {
                             const variable = scope.get(name);
 
                             // Warn on undefined values
@@ -332,9 +328,14 @@ class AssemblerContext {
             path: fn
         };
 
-        for await (let token of loader(fn)) {
-            token.location.parserSource = this.parserSource
-            yield token;
+        for await (let block of loader(fn)) {
+            if (block instanceof Message) {
+                yield block;
+                continue ;
+            }
+
+            block.location.parserSource = this.parserSource
+            yield block;
         }
 
         this.parserSource = previous;
@@ -386,7 +387,7 @@ class AssemblerContext {
             }
 
             // This is for a future pass
-            console.log(block);
+            //console.log(block);
         }
     }
 }

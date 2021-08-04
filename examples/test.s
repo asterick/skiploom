@@ -1,13 +1,17 @@
+    X EQU 1
+    Y EQU 2
+    Z\X\?Y SET 3+4
+
     ;Z EQU 192
     ;INFO 192 + 256
 
-    EXTERN (CODE, SHORT) poopiedoop
-    INCLUDE "./include.s" ;USING "text.transform.js"
+    ;EXTERN (CODE, SHORT) poopiedoop
+    ;INCLUDE "./include.s" ;USING "text.transform.js"
 
-    MSG 1
-    WARN 2
-    FAIL 3
-some_label:
+    ;MSG 1
+    ;WARN 2
+    ;FAIL 3
+;some_label:
 
 ;TEST_M MACRO A, B, C, D
     ;LD A, I\A
@@ -20,7 +24,7 @@ some_label:
 
     GLOBAL A
     LOCAL  B
-    DEFINE Q 'bert'
+    DEFINE C 'bert'
 
     B SET #01
     B SET B + 2
@@ -33,12 +37,13 @@ some_label:
 
     IF A == 1
         B SET B + 02
-        WARN B
+        WARN B, C
     ELSEIF A == 2
         B SET B + 03
+        WARN B, C
     ELSEIF ""
-        WARN C
+        WARN B, C
     ELSE
         B SET B + 04
-        WARN B
+        WARN B, C
     ENDIF

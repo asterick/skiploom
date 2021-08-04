@@ -1,3 +1,4 @@
+const { keywords } = require("moo");
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
 
 // This needs to be dynamic
@@ -9,6 +10,14 @@ const radix = 10;
 
 function isValueType(ast) {
     return ast.type == "Number" || ast.type == "String";
+}
+
+function asName(ast) {
+    if (ast.name) {
+        return ast.name
+    }
+
+    throw `Expression does not have a name`;
 }
 
 function asString(ast) {
@@ -43,163 +52,106 @@ function asTruthy(ast) {
     }
 
 function flatten_unary(ast, scope, guard) {
-    const value = flatten(ast.value, scope, guard);
+    const value = flatten(ast.value, scope, true, guard);
 
     throw ast;
 }
 
 function flatten_binary(ast, scope, guard) {
-    const left = flatten(ast.left, scope, guard);
-    const right = flatten(ast.right, scope, guard);
+    const casting = {
+        // Identifier expression
+        "IdentifierConcat": { left:   asName, right:   asName, op: (l, r) => ({ type: "Identifier", name: (l + r) }) },
+        "ValueConcat":      { left:   asName, right: asNumber, op: (l, r) => ({ type: "Identifier", name: (l + r.toString(10)) }) },
+        "HexValueConcat":   { left:   asName, right: asNumber, op: (l, r) => ({ type: "Identifier", name: (l + r.toString(16)) }) },
 
-    // These pre-empt
-    if (!isValueType(left)) {
+        // Preemptive values
+        "LogicalOr":        { left:     null, right:     null, op: (l, r) => (asTruthy(l) ? l : r) },
+        "LogicalAnd":       { left:     null, right:     null, op: (l, r) => (!asTruthy(l) ? l : r) },
+
+        // String operation
+        "Concatinate":      { left: asString, right: asString, op: (l, r) => (l + r) },
+
+        // Un-typed operation
+        "Equal":            { left:     null, right:     null, op: (l, r) => (l === r) },
+        "NotEqual":         { left:     null, right:     null, op: (l, r) => (l !== r) },
+
+        // Numeric operation
+        "BitwiseOr":        { left: asNumber, right: asNumber, op: (l, r) => (l | r) },
+        "BitwiseXor":       { left: asNumber, right: asNumber, op: (l, r) => (l ^ r) },
+        "BitwiseAnd":       { left: asNumber, right: asNumber, op: (l, r) => (l & r) },
+        "Greater":          { left: asNumber, right: asNumber, op: (l, r) => (l > r) },
+        "Less":             { left: asNumber, right: asNumber, op: (l, r) => (l < r) },
+        "GreaterEqual":     { left: asNumber, right: asNumber, op: (l, r) => (l >= r) },
+        "LessEqual":        { left: asNumber, right: asNumber, op: (l, r) => (l <= r) },
+        "ShiftLeft":        { left: asNumber, right: asNumber, op: (l, r) => (l << r) },
+        "ShiftRight":       { left: asNumber, right: asNumber, op: (l, r) => (l >> r) },
+        "Add":              { left: asNumber, right: asNumber, op: (l, r) => (l + r) },
+        "Subtract":         { left: asNumber, right: asNumber, op: (l, r) => (l - r) },
+        "Multiply":         { left: asNumber, right: asNumber, op: (l, r) => (l * r) },
+        "Divide":           { left: asNumber, right: asNumber, op: (l, r) => (l / r) },
+        "Modulo":           { left: asNumber, right: asNumber, op: (l, r) => (l % r) }
+    }
+
+    if (!ast.op) {
+        throw `Unhandled operation type ${ast.op}`
+    }
+
+    const cast = casting[ast.op];
+    let left = flatten(ast.left, scope, cast.left == asName, guard);
+    let right = flatten(ast.right, scope, true, guard);
+
+    // Left side can be an identifier
+    if (cast.left == asName) {
+        if (left.type != "Identifier") {
+            return { ... ast, left, right};
+        }
+    } else if (isValueType(left)) {
         return { ... ast, left, right };
     }
 
-    switch (ast.op) {
-        case "LogicalOr":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: asTruthy(left) ? left : right
-            };
-
-        case "LogicalAnd":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: !asTruthy(left) ? left : right
-            };
+    if (cast.left) {
+        left = cast.left(left);
     }
 
+    // The right has to have resolved as being a value
     if (!isValueType(right)) {
-        return { ... ast, left, right };
+        return { ... ast, right, right };
     }
 
-    switch (ast.op) {
-        case "Concatinate":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: asString(left) + asString(right)
-            };
-
-        case "BitwiseOr":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: asNumber(left) | asNumber(right)
-            };
-
-        case "BitwiseXor":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: asNumber(left) ^ asNumber(right)
-            };
-
-        case "BitwiseAnd":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: asNumber(left) & asNumber(right)
-            };
-
-
-        case "Equal":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: left.value === right.value
-            };
-
-        case "NotEqual":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: left.value !== right.value
-            };
-        case "Greater":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: left.value > right.value
-            };
-        case "Less":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: left.value < right.value
-            };
-        case "GreaterEqual":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: left.value >= right.value
-            };
-        case "LessEqual":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: left.value <= right.value
-            };
-
-        case "ShiftLeft":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: left.value << right.value
-            };
-
-        case "ShiftRight":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: left.value >> right.value
-            };
-
-        case "Add":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: asNumber(left) + asNumber(right)
-            };
-
-        case "Subtract":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: asNumber(left) - asNumber(right)
-            };
-
-        case "Multiply":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: asNumber(left) * asNumber(right)
-            };
-
-        case "Divide":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: asNumber(left) / asNumber(right)
-            };
-
-        case "Modulo":
-            return {
-                type: "Number",
-                location: ast.location,
-                value: asNumber(left) % asNumber(right)
-            };
-
-        default:
-            throw `TODO: ${ast.op}`;
+    if (cast.right) {
+        right = cast.right(right);
     }
+
+    // Return result and wrap it
+    let value = cast.op(left, right);
+
+    switch (typeof value) {
+        case "object":
+            break ;
+        case "string":
+            value = {
+                value,
+                type: "String"
+            };
+            break ;
+        case "true":
+        case "false":
+            value = value ? 1 : 0;
+        case "number":
+            value = {
+                value,
+                type: "Number"
+            };
+            break ;
+    }
+
+    return {
+        location: ast.location,
+        ... value
+    };
 }
 
-function flatten(ast, scope, propegate, guard = []) {
+function flatten(ast, scope, propegate, guard) {
     switch (ast.type) {
     // Value types
     case "Fragment":
@@ -219,7 +171,7 @@ function flatten(ast, scope, propegate, guard = []) {
         return flatten_unary(ast, scope, guard);
     case "BinaryOperation":
         return flatten_binary(ast, scope, guard);
-    // TODO: TERNARY
+    // case "TernaryOperation":
 
     // Variables
     case "Identifier":
@@ -263,7 +215,7 @@ function evaluate(scope, tree, propegate = true) {
     }
 
     // Flatten our expression
-    return flatten(tree, scope);
+    return flatten(tree, scope, propegate, []);
 }
 
 async function* evaluate_pass(scope, tree) {
@@ -295,7 +247,7 @@ async function* evaluate_pass(scope, tree) {
             case "ExternDirective":
             case "UndefineDirective":
                 Object.assign(token, {
-                    names: evaluate(scope, token.names)
+                    names: evaluate(scope, token.names, false)
                 });
                 break ;
             case "SetDirective":
@@ -390,7 +342,7 @@ async function* lazy_evaluate_pass(scope, feed) {
 
 module.exports = {
     isValueType,
-    asNumber, asString, asTruthy,
+    asNumber, asString, asTruthy, asName,
 
     evaluate_pass,
     lazy_evaluate_pass
