@@ -2,7 +2,8 @@ from json import dumps
 import os
 import csv
 
-CONDITIONS = {
+ARGUMENTS = {
+    # Conditions
     "LT": "LESS_THAN",
     "LE": "LESS_EQUAL",
     "GT": "GREATER_THAN",
@@ -16,19 +17,18 @@ CONDITIONS = {
     "Z": "ZERO",
     "NZ": "NOT_ZERO",
 
-    "F0": "CONDITION_SPECIAL_FLAG_0",
-    "F1": "CONDITION_SPECIAL_FLAG_1",
-    "F2": "CONDITION_SPECIAL_FLAG_2",
-    "F3": "CONDITION_SPECIAL_FLAG_3",
-    "NF0": "CONDITION_NOT_SPECIAL_FLAG_0",
-    "NF1": "CONDITION_NOT_SPECIAL_FLAG_1",
-    "NF2": "CONDITION_NOT_SPECIAL_FLAG_2",
-    "NF3": "CONDITION_NOT_SPECIAL_FLAG_3"
-}
+    "F0": "SPECIAL_FLAG_0",
+    "F1": "SPECIAL_FLAG_1",
+    "F2": "SPECIAL_FLAG_2",
+    "F3": "SPECIAL_FLAG_3",
+    "NF0": "NOT_SPECIAL_FLAG_0",
+    "NF1": "NOT_SPECIAL_FLAG_1",
+    "NF2": "NOT_SPECIAL_FLAG_2",
+    "NF3": "NOT_SPECIAL_FLAG_3",
 
-ARGUMENTS = {
-    "ALL": "REGS_ALL",
-    "ALE": "REGS_ALE",
+    # Arguments
+    "ALL": "REG_ALL",
+    "ALE": "REG_ALE",
 
     "A": "REG_A",
     "B": "REG_B",
@@ -51,7 +51,7 @@ ARGUMENTS = {
     "SP": "REG_SP",
     "PC": "REG_PC",
 
-    "[hhll]": "MEM_ABS16",
+    "[hhll]": "MEM_ABS",
     "[HL]": "MEM_HL",
     "[IX]": "MEM_IX",
     "[IY]": "MEM_IY",
@@ -63,41 +63,30 @@ ARGUMENTS = {
     "[BR:ll]": "MEM_BR",
     "[kk]": "MEM_VECTOR",
 
-    "rr": "REL_8",
-    "qqrr": "REL_16",
-    "#nn": "IMM_8",
-    "#mmnn": "IMM_16",
+    "rr": ("IMM", 8, True),
+    "qqrr": ("IMM", 16, True),
+    "#nn": ("IMM", 8, False),
+    "#mmnn": ("IMM", 16, False),
 }
 
 def format(op, arg1, arg2):
-    condition = None
+    args = [ARGUMENTS[arg] for arg in [arg1, arg2] if arg]
 
-    if arg1 in CONDITIONS:
-        condition, arg1, arg2 = CONDITIONS[arg1], arg2, None
+    size = None
+    signed = None
+    if len(args) > 0 and type(args[-1]) is tuple:
+        (t, size, signed) = args[-1]
+        args[-1] = t
 
-    args = ["Arguments.%s" % ARGUMENTS[arg] for arg in [arg1, arg2] if arg]
-
-    # add conditions
-    return op, { "condition": condition, "args": args }
+    return op, { "args": args, "signed": signed, "size": size }
 
 with open(os.path.join(os.path.dirname(__file__), 's1c88.csv'), 'r') as csvfile:
     spamreader = csv.reader(csvfile)
 
     next(spamreader)
 
-    shift = len(ARGUMENTS.values()) + 1
-
-    print ("const Arguments = {")
-    for i, arg in enumerate(ARGUMENTS.values()):
-        print ("\t%s: %i," % (arg, i+1))
-    print ("};\n")
-
-    print ("const Conditions = {")
-    for i, arg in enumerate(CONDITIONS.values()):
-        print ("\t%s: %i," % (arg, (i+1) * (shift ** 2)))
-    print ("};\n")
-
-    print "const lookup = (... rest) => rest.reduce((acc, i) => (acc*%i+i),0);\n" % shift;
+    arg_types = set()
+    cond_types = set()
 
     codes = {}
     for row in spamreader:
@@ -116,18 +105,28 @@ with open(os.path.join(os.path.dirname(__file__), 's1c88.csv'), 'r') as csvfile:
         if not op in ops:
             ops[op] = []
 
-        index = "lookup(%s)" % (', '.join(args['args']))
-        if args['condition']:
-            index = index + "+Conditions." + args['condition']
 
-        ops[op] += [(index, "[%s]" % ", ".join([str(byte) for byte in code]))]
+        index = "lookup(%s)" % (', '.join(["Arguments.%s" % arg for arg in args['args']]))
+        [arg_types.add(i) for i in args['args']]
+        entry = { 'code': code, "size": args['size'], "signed": args['signed'] }
+        ops[op] += [(index, entry)]
+
+
+    shift = len(arg_types) + 1
+    print ("const Arguments = {")
+    for i, arg in enumerate(arg_types):
+        print ("\t%s: %i," % (arg, i+1))
+    print ("};\n")
+
+    print ("const lookup = (... rest) => rest.reduce((acc, i) => (acc*%i+i),0);\n" % shift);
 
     print ("const Instructions = {")
     for op, table in ops.items():
         print ("\t'%s': {" % op)
-        for (index, code) in table:
-            print "\t\t[%s]: %s," % (index, code)
+        for (index, entry) in table:
+            print ("\t\t[%s]: %s," % (index, dumps(entry)))
+            pass
         print ("\t},")
     print ("};\n")
 
-print "module.exports = { Arguments, Conditions, Instructions };\n"
+print ("module.exports = { lookup, Arguments, Instructions };\n")

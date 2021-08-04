@@ -13,11 +13,17 @@ _main:
         SYMB    TYPE, 257, 'X', 8, #16, 2, 0
         SYMB    ALAB, _main, #257
         HALT
+        LD      HL, 0
+        PUSH    ALE
+        LD      [IX+L], A
+        LD      [IX+7Fh], A
+        LD      [SP-80h], IX
+        LD      [02080H], L
+        LD      [BR:020h], #0FFh
+        LD      [HL], 0
         LD      l,#0c0h
         LD      ep,#00h
-        LD      [02080H],l
-        LD      [BR:020h], #0FFh
-forever:        JRS NZ, forever
+        JRS NZ, 0
         RET
 
         EXTERN  (CODE, SHORT) __START
