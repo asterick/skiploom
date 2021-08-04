@@ -11,6 +11,24 @@ const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require (".
  * Expression evaluation
  */
 
+function flatten_function_call(ast, ctx, guard) {
+    const calls = {
+        "AS88": () => "AS88 (node remake)"
+    };
+
+    // Calculate parameters and abort if not final
+    const parameters = (ast.parameters||[]).map((v) => flatten(v, ctx, true, guard));
+    if (!parameters.every(isValueType)) {
+        return { ... ast, parameters };
+    }
+
+    // Return value
+    return {
+        location: ast.location,
+        ... autoType(calls[ast.name](... parameters))
+    };
+}
+
 function flatten_unary(ast, ctx, guard) {
     const casting = {
         "MacroLocalConcat":     { value:   asName, op: (v) => ({ type: "Identifier", name: `${ctx.name}${String.fromCharCode(55356, 57173)}${v}` }) },
@@ -135,11 +153,13 @@ function flatten(ast, ctx, propegate, guard) {
         }
 
     // Operators
+    case "FunctionCall":
+        return flatten_function_call(ast, ctx, guard);
     case "UnaryOperation":
         return flatten_unary(ast, ctx, guard);
     case "BinaryOperation":
         return flatten_binary(ast, ctx, guard);
-     case "TernaryOperation":
+    case "TernaryOperation":
         {
             const value = flatten(ast.test, ctx, true, guard);
             const onTrue = flatten(ast.onTrue, ctx, true, guard);

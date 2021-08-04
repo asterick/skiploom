@@ -1,4 +1,5 @@
     Z EQU 123
+    MSG @AS88()
 
     loop DUP 5
     WARN "Just some warnings for ya: ", loop

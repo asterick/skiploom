@@ -55,7 +55,7 @@ const lexer = moo.compile({
         { match: /"(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r"])*"/, value: (s) => escape(s.slice(1,-1)) },
         { match: /'(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r'])*'/, value: (s) => escape(s.slice(1,-1)) },
     ],
-    function_name: { match: /@[a-zA-Z]+/, value: (v) => v.slice(1).toUpperCase() },
+    function_name: { match: /@[a-zA-Z0-9]+/, value: (v) => v.slice(1).toUpperCase() },
     identifier: {
         match: /[a-zA-Z_][a-zA-Z_0-9]*/,
         type: caseInsensitiveKeywords(keywords)
