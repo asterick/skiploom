@@ -1,9 +1,10 @@
 const {
-    isValueType, autoType,
+    isValueType, isNumber, autoType,
     asNumber, asString, asTruthy, asName,
 } = require("../helper.js");
 
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
+const { assemble } = require("../assemble.js");
 
 const encoder = new TextEncoder();
 
@@ -98,6 +99,45 @@ async function* finalize(scope, tree) {
 
             // These are the unimplemented bits
             case "DispatchDirective":
+                // Validate that this instruction is resolved
+                if (token.parameters) {
+                    // Check if we have finalized the instruction
+                    const final = token.parameters.every((param) => {
+                        if (isValueType(param)) {
+                            return true;
+                        }
+
+                        switch (param.type) {
+                        case 'Register':
+                        case 'Condition':
+                            return true;
+                        case 'Fragment':
+                            return false;
+                        case 'String':
+                            throw "Cannot pass string to macro or undefined instruction";
+                        case 'IndirectMemory':
+                            return isNumber(param.address);
+                        case 'IndirectRegisterOffset':
+                            if (param.register.type != "Register") {
+                                throw "Cannot use register offset syntax without register on left-side";
+                            }
+
+                            return isNumber(param.offset);
+                        default:
+                            return false;
+                        }
+                    });
+
+                    // This instruction is not ready to be evaluated
+                    if (!final) {
+                        yield token;
+                        return ;
+                    }
+
+                    yield assemble(asName(token.call), ... token.parameters);
+                }
+                break ;
+
             case "DataAllocateDirective":
             case "SectionDirective":
             case "AlignDirective":
@@ -105,6 +145,7 @@ async function* finalize(scope, tree) {
             case "DefineSectionDirective":
             case "Fragment":
                 yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: finalize) ${token.type}`);
+                break ;
 
             default:
                 yield token;

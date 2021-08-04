@@ -2,6 +2,14 @@ function isValueType(ast) {
     return ast.type == "Number" || ast.type == "String";
 }
 
+function isNumber(ast) {
+    return ast.type == "Number";
+}
+
+function isString(ast) {
+    return ast.type == "String";
+}
+
 function asName(ast) {
     if (ast.name) {
         return ast.name
@@ -62,6 +70,7 @@ function autoType(value) {
 }
 
 module.exports = {
-    isValueType, autoType,
+    autoType,
+    isValueType, isNumber, isString,
     asNumber, asString, asTruthy, asName,
 };
