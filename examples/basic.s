@@ -16,9 +16,9 @@ _main:
         LD      l,#0c0h
         LD      ep,#00h
         LD      [02080H],l
+        LD      [BR:020h], #0FFh
         RET
 
         EXTERN  (CODE, SHORT) __START
         EXTERN  (DATA) __lc_es
         END
-        include "myinclude.inc" using "transform.js"

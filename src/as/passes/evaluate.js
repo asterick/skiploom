@@ -180,6 +180,17 @@ function flatten_binary(ast, ctx, guard) {
 function flatten(ast, ctx, propegate, guard) {
     switch (ast.type) {
     // Value types
+    case "IndirectMemory":
+        return {
+            ... ast,
+            address: flatten(ast.address, ctx, propegate, guard)
+        };
+    case "IndirectRegisterOffset":
+        return {
+            ... ast,
+            register: flatten(ast.register, ctx, propegate, guard),
+            offset: flatten(ast.offset, ctx, propegate, guard)
+        };
     case "Fragment":
     case "String":
         return ast;
@@ -307,6 +318,7 @@ async function* evaluate(ctx, tree) {
                 };
                 break ;
             case "LabelDirective":
+            case "NameDirective":
                 yield {
                     ... token,
                     name: evaluate_statement(ctx, token.name, false)
@@ -411,9 +423,20 @@ async function* evaluate(ctx, tree) {
                 break ;
 
             case "SectionDirective":
-            case "NameDirective":
+                yield {
+                    ... token,
+                    name: evaluate_statement(ctx, token.name, false)
+                };
+                break ;
+
             case "DefineSectionDirective":
-                throw new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: evaluate) ${token.type}`);
+                yield {
+                    ... token,
+                    name: evaluate_statement(ctx, token.name, false),
+                    at: evaluate_statement(ctx, token.at)
+                };
+                break ;
+
             default:
                 yield token;
             }

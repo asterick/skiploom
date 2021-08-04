@@ -14,7 +14,7 @@ async function* include (location, target, module = 'text.loader.js') {
     try {
         loader = require(await resolve(module));
     } catch(e) {
-        yield new Message(LEVEL_FATAL, null, "Cannot resolve loader: ${module}");
+        yield new Message(LEVEL_FATAL, null, `Cannot resolve loader: ${module}`);
         return ;
     }
 
