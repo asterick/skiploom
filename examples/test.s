@@ -1,4 +1,6 @@
-    X EQU 1
+    RADIX 8
+    X EQU 10
+    RADIX 10d
     Y EQU 2
     ^Z\X\?Y SET -(3+4)
 

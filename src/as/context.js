@@ -1,14 +1,23 @@
+const {
+    asNumber
+} = require("./passes/evaluate.js");
+
 const { uuid } = require("../util/uuid.js");
 
-class Scope {
+class Context {
     constructor (globals, top = null) {
         this.name = uuid();
         this.globals = globals;
         this.top = top || Object.create(globals);
     }
 
+    radix () {
+        return asNumber(this.get('radix').value);
+    }
+
     nest () {
-        return new Scope(this.globals, Object.create(this.top));
+        const ctx = new Context(this.globals, Object.create(this.top));
+        return ctx;
     }
 
     local(name) {
@@ -84,11 +93,11 @@ class Scope {
             }
         }
 
-        // Create a mirrored scope (mutable)
-        return new Scope(globals, target);
+        // Create a mirrored context (mutable)
+        return new Context(globals, target);
     }
 
-    // Conditionally combine mirrored scopes
+    // Conditionally combine mirrored contexts
     prospect(test, left, right) {
         // Walk up our prototype chain
 
@@ -145,5 +154,5 @@ class Scope {
 }
 
 module.exports = {
-    Scope
+    Context
 };

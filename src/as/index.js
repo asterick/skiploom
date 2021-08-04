@@ -2,7 +2,7 @@ const path = require("path");
 
 const { resolve } = require("../util/resolve.js");
 const { expressionParser } = require("./parsers.js");
-const { Scope } = require("./scope.js");
+const { Context } = require("./context.js");
 const { uuid } = require("../util/uuid.js");
 
 const {
@@ -33,7 +33,7 @@ function defines(... pairs) {
                 frozen: true,
                 define: true,
                 export: false,
-                value: parser.results
+                value: parser.results[0]
             };
         } catch(e) {
             throw new Error(`Malformed define: ${define}`);
@@ -86,6 +86,20 @@ class AssemblerContext {
                 case "EndDirective":
                     yield token;
                     return ;
+                case "RadixDirective":
+                    {
+                        const variable = scope.global('radix');
+
+                        if (variable.frozen) {
+                            throw new Message(LEVEL_FAIL, token.location, `Radix is frozen`)
+                        }
+
+                        Object.assign(variable, {
+                            value: token.value,
+                            location: token.location
+                        });
+                    }
+                    break ;
 
                 // Variable Directives
                 case "LocalDirective":
@@ -286,7 +300,6 @@ class AssemblerContext {
                 //case "DispatchDirective":
                 //case "SectionDirective":
                 //case "AlignDirective":
-                //case "RadixDirective":
                 //case "NameDirective":
                 //case "AsciiBlockDirective":
                 //case "TerminatedAsciiBlockDirective":
@@ -368,7 +381,19 @@ class AssemblerContext {
 
     async assemble(path, globals)
     {
-        const scope = new Scope({ ... globals });
+        const scope = new Context({
+            radix: {
+                export:
+                false, value: {
+                    type: "Number",
+                    value: 10,
+                    location: {
+                        parserSource: { source: "defaults" }
+                    }
+                }
+            },
+            ... globals
+        });
 
         // Load our file
         const tree = this.include(path);

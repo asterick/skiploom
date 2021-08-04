@@ -1,9 +1,6 @@
 const { keywords } = require("moo");
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
 
-// This needs to be dynamic
-const radix = 10;
-
 /*
  * Expression evaluation
  */
@@ -51,9 +48,9 @@ function asTruthy(ast) {
         }
     }
 
-function flatten_unary(ast, scope, guard) {
+function flatten_unary(ast, ctx, guard) {
     const casting = {
-        "MacroLocalConcat":     { value:   asName, op: (v) => ({ type: "Identifier", name: `${scope.name}\0${v}` }) },
+        "MacroLocalConcat":     { value:   asName, op: (v) => ({ type: "Identifier", name: `${ctx.name}\0${v}` }) },
         "LogicalNot":           { value: asTruthy, op: (v) => v },
         "BitwiseComplement":    { value: asNumber, op: (v) => ~v },
         "Negate":               { value: asNumber, op: (v) => -v },
@@ -61,7 +58,7 @@ function flatten_unary(ast, scope, guard) {
     };
 
     const cast = casting[ast.op];
-    let value = flatten(ast.value, scope, cast.value == asName, guard);
+    let value = flatten(ast.value, ctx, cast.value == asName, guard);
 
     // Value can be an identifier
     if (cast.value == asName) {
@@ -105,7 +102,7 @@ function flatten_unary(ast, scope, guard) {
     };
 }
 
-function flatten_binary(ast, scope, guard) {
+function flatten_binary(ast, ctx, guard) {
     const casting = {
         // Identifier expression
         "IdentifierConcat": { left:   asName, right:   asName, op: (l, r) => ({ type: "Identifier", name: (l + r) }) },
@@ -145,15 +142,15 @@ function flatten_binary(ast, scope, guard) {
     }
 
     const cast = casting[ast.op];
-    let left = flatten(ast.left, scope, cast.left == asName, guard);
-    let right = flatten(ast.right, scope, true, guard);
+    let left = flatten(ast.left, ctx, cast.left == asName, guard);
+    let right = flatten(ast.right, ctx, true, guard);
 
     // Left side can be an identifier
     if (cast.left == asName) {
         if (left.type != "Identifier") {
             return { ... ast, left, right};
         }
-    } else if (isValueType(left)) {
+    } else if (!isValueType(left)) {
         return { ... ast, left, right };
     }
 
@@ -199,7 +196,7 @@ function flatten_binary(ast, scope, guard) {
     };
 }
 
-function flatten(ast, scope, propegate, guard) {
+function flatten(ast, ctx, propegate, guard) {
     switch (ast.type) {
     // Value types
     case "Fragment":
@@ -209,27 +206,27 @@ function flatten(ast, scope, propegate, guard) {
         if (typeof ast.value == "number") {
             return ast;
         } else if (typeof ast.value == "string") {
-            return { ... ast, value: parseInt(ast.value, radix) };
+            return { ... ast, value: parseInt(ast.value, ctx.radix()) };
         } else {
             throw new Message(LEVEL_FAIL, ast.location, `Invalid number value: ${ast.value}`);
         }
 
     // Operators
     case "UnaryOperation":
-        return flatten_unary(ast, scope, guard);
+        return flatten_unary(ast, ctx, guard);
     case "BinaryOperation":
-        return flatten_binary(ast, scope, guard);
+        return flatten_binary(ast, ctx, guard);
      case "TernaryOperation":
         {
-            const value = flatten(ast.test, scope, true, guard);
-            const onTrue = flatten(ast.onTrue, scope, true, guard);
-            const onFalse = flatten(ast.onFalse, scope, true, guard);
+            const value = flatten(ast.test, ctx, true, guard);
+            const onTrue = flatten(ast.onTrue, ctx, true, guard);
+            const onFalse = flatten(ast.onFalse, ctx, true, guard);
 
             if (!isValueType(value)) {
                 return { ... ast, value };
             }
 
-            return flatten(asTruthy(value) ? onTrue : onFalse, scope, true, guard);
+            return flatten(asTruthy(value) ? onTrue : onFalse, ctx, true, guard);
         }
 
     // Variables
@@ -245,7 +242,7 @@ function flatten(ast, scope, propegate, guard) {
                 throw new Message(LEVEL_FATAL, ast.location, `Circular reference ${guard.join("->")}->${ast.name}`);
             }
 
-            const variable = scope.get(ast.name) || scope.local(ast.name);
+            const variable = ctx.get(ast.name) || ctx.local(ast.name);
             variable.used = true;
 
             // Implied forward decl
@@ -255,7 +252,7 @@ function flatten(ast, scope, propegate, guard) {
             }
 
             // Bubble up name (deferred values are implicitly named)
-            return { name:ast.name, ... flatten(scope.get(ast.name).value, scope, propegate, guard.concat(ast.name)) };
+            return { name:ast.name, ... flatten(ctx.get(ast.name).value, ctx, propegate, guard.concat(ast.name)) };
         }
 
     default:
@@ -263,35 +260,35 @@ function flatten(ast, scope, propegate, guard) {
     }
 }
 
-function evaluate(scope, tree, propegate = true) {
+function evaluate(ctx, tree, propegate = true) {
     // Helper functions for arrays an falsy values
     if (tree == null) {
         return tree;
     } else if (Array.isArray(tree)) {
-        return tree.map((idx) => evaluate(scope, idx, propegate));
+        return tree.map((idx) => evaluate(ctx, idx, propegate));
     } else if (tree === undefined) {
         throw "Attempted to evaluate an undefined field"
     }
 
     // Flatten our expression
-    return flatten(tree, scope, propegate, []);
+    return flatten(tree, ctx, propegate, []);
 }
 
-async function* evaluate_pass(scope, tree) {
+async function* evaluate_pass(ctx, tree) {
     for await (let token of tree) {
         try {
             switch (token.type) {
             // Assembly flow control
             case "IncludeDirective":
                 Object.assign(token, {
-                    path: evaluate(scope, token.path),
-                    transform: evaluate(scope, token.transform)
+                    path: evaluate(ctx, token.path),
+                    transform: evaluate(ctx, token.transform)
                 });
                 break ;
             case "AlignDirective":
             case "RadixDirective":
                 Object.assign(token, {
-                    value: evaluate(scope, token.value)
+                    value: evaluate(ctx, token.value)
                 });
                 break ;
             case "EndDirective":
@@ -306,26 +303,26 @@ async function* evaluate_pass(scope, tree) {
             case "ExternDirective":
             case "UndefineDirective":
                 Object.assign(token, {
-                    names: evaluate(scope, token.names, false)
+                    names: evaluate(ctx, token.names, false)
                 });
                 break ;
             case "SetDirective":
             case "EquateDirective":
             case "DefineDirective":
                 Object.assign(token, {
-                    name: evaluate(scope, token.name, false),
-                    value: evaluate(scope, token.value)
+                    name: evaluate(ctx, token.name, false),
+                    value: evaluate(ctx, token.value)
                 });
                 break ;
             case "LabelDirective":
                 Object.assign(token, {
-                    name: evaluate(scope, token.name, false)
+                    name: evaluate(ctx, token.name, false)
                 });
                 break ;
             case "IfDirective":
                 token.conditions.forEach((clause) => {
                     Object.assign(clause, {
-                        test: evaluate(scope, clause.test)
+                        test: evaluate(ctx, clause.test)
                     });
                 });
                 break ;
@@ -335,7 +332,7 @@ async function* evaluate_pass(scope, tree) {
             case "WarningDirective":
             case "FailureDirective":
                 Object.assign(token, {
-                    message: evaluate(scope, token.message)
+                    message: evaluate(ctx, token.message)
                 });
                 break ;
 
@@ -383,7 +380,7 @@ async function* evaluate_pass(scope, tree) {
     }
 }
 
-async function* lazy_evaluate_pass(scope, feed) {
+async function* lazy_evaluate_pass(ctx, feed) {
     let blocks = [];
 
     // Run through entire scope before lazy evaluating tree
@@ -396,7 +393,7 @@ async function* lazy_evaluate_pass(scope, feed) {
         blocks.push(block);
     }
 
-    yield* evaluate_pass(scope, blocks);
+    yield* evaluate_pass(ctx, blocks);
 }
 
 module.exports = {
