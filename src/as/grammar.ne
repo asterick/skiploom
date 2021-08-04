@@ -104,14 +104,14 @@ directive ->
 
     | "EXITM" {% ([id]) => ({ type: "ExitMacroDirective", location:location(id) }) %}
     | "PMACRO" symbol_list {% ([id,names]) => ({ type: "PurgeMacrosDirective", names, location:location(id) }) %}
-    | "DUP" expression eol source_body "ENDM"
-      {% ([id,count,,body]) => ({ type: "CountDupDirective", count, body, location:location(id) }) %}
-    | "DUPA" symbol "," expression_list eol source_body "ENDM"
-      {% ([id,variable,,list,,body]) => ({ type: "ListDupDirective", variable, list, body, location:location(id) }) %}
-    | "DUPC" symbol "," expression eol source_body "ENDM"
-      {% ([id,variable,,string,,body]) => ({ type: "CharacterDupDirective", variable, string, body, location:location(id) }) %}
-    | "DUPF" symbol ("," expression  {% at(1) %}):? "," expression ("," expression {% at(1) %}):? eol source_body "ENDM"
-      {% ([id,variable,start,,end,step,,body]) => ({ type: "SequenceDupDirective", variable, start, end, step, body, location:location(id) }) %}
+    | symbol:? "DUP" expression eol source_body "ENDM"
+      {% ([counter, id,count,,body]) => ({ type: "CountDupDirective", counter, count, body, location:location(id) }) %}
+    | symbol:? "DUPA" symbol "," expression_list eol source_body "ENDM"
+      {% ([counter, id,variable,,list,,body]) => ({ type: "ListDupDirective", counter, variable, list, body, location:location(id) }) %}
+    | symbol:? "DUPC" symbol "," expression_list eol source_body "ENDM"
+      {% ([counter, id,variable,,strings,,body]) => ({ type: "CharacterDupDirective", counter, variable, strings, body, location:location(id) }) %}
+    | symbol:? "DUPF" symbol ("," expression  {% at(1) %}):? "," expression ("," expression {% at(1) %}):? eol source_body "ENDM"
+      {% ([counter, id,variable,start,,end,step,,body]) => ({ type: "SequenceDupDirective", counter, variable, start, end, step, body, location:location(id) }) %}
     | symbol "MACRO" symbol_list eol source_body "ENDM"
       {% ([name,,parameters,,body]) => ({ type: "MacroDefinitionDirective", name, parameters, body, location:name.location }) %}
     | if_directive

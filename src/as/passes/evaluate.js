@@ -21,14 +21,14 @@ function flatten_unary(ast, ctx, guard) {
     };
 
     const cast = casting[ast.op];
-    let value = flatten(ast.value, ctx, cast.value == asName, guard);
+    let value = flatten(ast.value, ctx, cast.value != asName, guard);
 
     // Value can be an identifier
     if (cast.value == asName) {
         if (value.type != "Identifier") {
             return { ... ast, value };
         }
-    } else if (isValueType(value)) {
+    } else if (!isValueType(value)) {
         return { ... ast, value };
     }
 
@@ -203,16 +203,18 @@ async function* evaluate(ctx, tree) {
             switch (token.type) {
             // Assembly flow control
             case "IncludeDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     path: evaluate_statement(ctx, token.path),
                     transform: evaluate_statement(ctx, token.transform)
-                });
+                };
                 break ;
             case "AlignDirective":
             case "RadixDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     value: evaluate_statement(ctx, token.value)
-                });
+                };
                 break ;
 
             // Variable Directives
@@ -220,38 +222,44 @@ async function* evaluate(ctx, tree) {
             case "GlobalDirective":
             case "ExternDirective":
             case "UndefineDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     names: evaluate_statement(ctx, token.names, false)
-                });
+                };
                 break ;
             case "SetDirective":
             case "EquateDirective":
             case "DefineDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     name: evaluate_statement(ctx, token.name, false),
                     value: evaluate_statement(ctx, token.value)
-                });
+                };
                 break ;
             case "LabelDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     name: evaluate_statement(ctx, token.name, false)
-                });
+                };
                 break ;
             case "IfDirective":
-                token.conditions.forEach((clause) => {
-                    Object.assign(clause, {
+                yield {
+                    ... token,
+                    conditions: token.conditions.map((clause) => ({
+                        ... clause,
                         test: evaluate_statement(ctx, clause.test)
-                    });
-                });
+                    }))
+                };
                 break ;
 
             // Display directives
             case "MessageDirective":
             case "WarningDirective":
             case "FailureDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     message: evaluate_statement(ctx, token.message)
-                });
+                };
                 break ;
 
             // Data section directives
@@ -259,49 +267,86 @@ async function* evaluate(ctx, tree) {
             case "TerminatedAsciiBlockDirective":
             case "DataBytesDirective":
             case "DataWordsDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     data: evaluate_statement(ctx, token.data)
-                });
+                };
                 break ;
             case "DataAllocateDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     size: evaluate_statement(ctx, token.size)
-                });
+                };
                 break ;
 
             // Macro Directives
-            //case "CountDupDirective":
-            //case "ListDupDirective":
-            //case "CharacterDupDirective":
-            //case "SequenceDupDirective":
+            case "CountDupDirective":
+                yield {
+                    ... token,
+                    counter: evaluate_statement(ctx, token.counter, false),
+                    count: evaluate_statement(ctx, token.count, false),
+                };
+                break ;
+
+            case "ListDupDirective":
+                yield {
+                    ... token,
+                    counter: evaluate_statement(ctx, token.counter, false),
+                    variable: evaluate_statement(ctx, token.variable, false),
+                    list: evaluate_statement(ctx, token.list)
+                };
+                break ;
+
+            case "CharacterDupDirective":
+                yield {
+                    ... token,
+                    counter: evaluate_statement(ctx, token.counter, false),
+                    variable: evaluate_statement(ctx, token.variable, false),
+                    strings: evaluate_statement(ctx, token.strings)
+                };
+                break ;
+
+            case "SequenceDupDirective":
+                yield {
+                    ... token,
+                    counter: evaluate_statement(ctx, token.counter, false),
+                    variable: evaluate_statement(ctx, token.variable, false),
+                    start: evaluate_statement(ctx, token.start),
+                    end: evaluate_statement(ctx, token.end),
+                    step: evaluate_statement(ctx, token.step),
+                };
+                break ;
+
             case "MacroDefinitionDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     name: evaluate_statement(ctx, token.name, false),
                     parameters: evaluate_statement(ctx, token.parameters, false)
-                });
+                };
                 break ;
+
             case "PurgeMacrosDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     names: evaluate_statement(ctx, token.names, false)
-                });
+                };
                 break ;
+
             case "DispatchDirective":
-                Object.assign(token, {
+                yield {
+                    ... token,
                     call: evaluate_statement(ctx, token.call, false),
                     parameters: evaluate_statement(ctx, token.parameters)
-                });
+                };
                 break ;
 
-            //case "SectionDirective":
-            //case "NameDirective":
-            //case "DefineSectionDirective":
-            default:
-                console.log(token);
+            case "SectionDirective":
+            case "NameDirective":
+            case "DefineSectionDirective":
                 throw new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: evaluate) ${token.type}`);
-
+            default:
+                yield token;
             }
-
-            yield token;
         } catch(msg) {
             if (msg instanceof Message) {
                 yield msg;

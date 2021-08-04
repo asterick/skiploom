@@ -49,11 +49,6 @@ function* TypedDataBlock({ type, data }, cast, array) {
 
 async function* finalize(scope, tree) {
     for await (let token of tree) {
-        if (token instanceof Message) {
-            yield token;
-            continue ;
-        }
-
         try {
             switch (token.type) {
             // Termination cases
@@ -94,7 +89,7 @@ async function* finalize(scope, tree) {
                 yield* TypedDataBlock(token, asNumber, Uint8Array);
                 break ;
             case "DataWordsDirective":
-                yield* TypedDataBlock(token, asNumber, Uint8Array);
+                yield* TypedDataBlock(token, asNumber, Uint16Array);
                 break ;
 
             // These are the unimplemented bits

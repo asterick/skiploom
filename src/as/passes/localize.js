@@ -1,5 +1,6 @@
 const {
-    isValueType, asString, asTruthy, asName,
+    isValueType,
+    asNumber, asString, asTruthy, asName,
 } = require("../helper.js");
 
 const { uuid } = require("../../util/uuid.js");
@@ -263,6 +264,7 @@ async function* localize(scope, feed) {
                     });
                 }
                 continue ;
+
             case "PurgeMacrosDirective":
                 for (const name of token.names.map(asName)) {
                     const variable = scope.get(name);
@@ -275,6 +277,7 @@ async function* localize(scope, feed) {
                     scope.remove(name);
                 }
                 continue ;
+
             case "DispatchDirective":
                 {
                     const call = asName(token.call);
@@ -308,15 +311,121 @@ async function* localize(scope, feed) {
                 continue ;
 
             case "CountDupDirective":
-            case "ListDupDirective":
-            case "CharacterDupDirective":
-            case "SequenceDupDirective":
-                // TODO: Unimplemented directives
-                throw new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: localize) ${token.type}`);
-            }
+                {
+                    const counter = token.counter && asName(token.counter);
+                    const count = asNumber(token.count);
 
-            // Forward to next phase
-            yield token;
+                    for (let value = 0; value < count; value++) {
+                        const ctx = scope.nest();
+                        if (counter) {
+                            Object.assign(ctx.local(counter), {
+                                location: token.location,
+                                value: { type: "Number", value }
+                            });
+                        }
+
+                        yield* passes.assemble(ctx, token.body);
+                    }
+                }
+                continue ;
+
+            case "ListDupDirective":
+                {
+                    const counter = token.counter && asName(token.counter);
+                    const variable = asName(token.variable);
+                    let iteration = 0;
+
+                    for (let value of token.list) {
+                        const ctx = scope.nest();
+
+                        if (counter) {
+                            Object.assign(ctx.local(counter), {
+                                location: token.location,
+                                value: { type: "Number", value: iteration++ }
+                            });
+                        }
+
+                        Object.assign(ctx.local(variable), {
+                            location: value.location,
+                            value
+                        });
+
+                        yield* passes.assemble(ctx, token.body);
+                    }
+                }
+                continue ;
+
+            case "CharacterDupDirective":
+                {
+                    const counter = token.counter && asName(token.counter);
+                    const variable = asName(token.variable);
+                    let iteration = 0;
+
+                    for (let value of token.strings) {
+                        const string = asString(value);
+
+                        for (let idx = 0; idx < string.length; idx++) {
+                            const ctx = scope.nest();
+
+                            if (counter) {
+                                Object.assign(ctx.local(counter), {
+                                    location: token.location,
+                                    value: { type: "Number", value: iteration++ }
+                                });
+                            }
+
+                            Object.assign(ctx.local(variable), {
+                                location: token.location,
+                                value: { type: "Number", value: string.charCodeAt(idx) }
+                            });
+
+                            yield* passes.assemble(ctx, token.body);
+                        }
+                    }
+                }
+                continue ;
+
+            case "SequenceDupDirective":
+                {
+                    const counter = token.counter && asName(token.counter);
+                    const variable = asName(token.variable);
+                    const start = token.start ? asNumber(token.start) : 0;
+                    const end = asNumber(token.end);
+                    const step = token.end ? asNumber(token.step) : 1;
+
+                    let count = start;
+                    let iteration = 0;
+
+                    if (step == 0) {
+                        throw new Message(LEVEL_FATAL, token.location, `Attempting to use a zero step in DUPF`);
+                    }
+
+                    while ((step < 0) ? (count >= end) : (count <= end)) {
+                        const ctx = scope.nest();
+
+
+                        if (counter) {
+                            Object.assign(ctx.local(counter), {
+                                location: token.location,
+                                value: { type: "Number", value: iteration++ }
+                            });
+                        }
+
+                        Object.assign(ctx.local(variable), {
+                            location: token.location,
+                            value: { type: "Number", value: count }
+                        });
+
+                        yield* passes.assemble(ctx, token.body);
+                        count += step;
+                    }
+                }
+                continue ;
+
+            default:
+                // Forward to next phase
+                yield token;
+            }
         } catch(msg) {
             if (msg instanceof Message) {
                 yield msg;
