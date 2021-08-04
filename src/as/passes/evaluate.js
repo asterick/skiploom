@@ -50,7 +50,7 @@ function asTruthy(ast) {
 
 function flatten_unary(ast, ctx, guard) {
     const casting = {
-        "MacroLocalConcat":     { value:   asName, op: (v) => ({ type: "Identifier", name: `${ctx.name}\0${v}` }) },
+        "MacroLocalConcat":     { value:   asName, op: (v) => ({ type: "Identifier", name: `${ctx.name}${String.fromCharCode(55356, 57173)}${v}` }) },
         "LogicalNot":           { value: asTruthy, op: (v) => v },
         "BitwiseComplement":    { value: asNumber, op: (v) => ~v },
         "Negate":               { value: asNumber, op: (v) => -v },

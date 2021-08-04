@@ -308,7 +308,7 @@ class AssemblerContext {
                 //case "DataAllocateDirective":
                 //case "DefineSectionDirective":
                 default:
-                    yield new Message(LEVEL_FAIL, token.location, `Unhandled directive ${token.type}`);
+                    yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: localize) ${token.type}`);
                     break ;
                 }
             } catch(msg) {
