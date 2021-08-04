@@ -39,14 +39,35 @@ function asNumber(ast) {
 
 function asTruthy(ast) {
     switch (ast.type) {
-        case "Number":
-            return ast.value != 0;
-        case "String":
-            return ast.value !== "";
-        default:
-            throw `Cannot coerse ${ast.type} to number`;
-        }
+    case "Number":
+        return ast.value != 0;
+    case "String":
+        return ast.value !== "";
+    default:
+        throw `Cannot coerse ${ast.type} to number`;
     }
+}
+
+function autoType(value) {
+    switch (typeof value) {
+    case "object":
+        return value ;
+    case "string":
+        return {
+            value,
+            type: "String"
+        };
+    case "true":
+    case "false":
+        value = value ? 1 : 0;
+    case "number":
+        return {
+            value,
+            type: "Number"
+        };
+        break ;
+    }
+}
 
 function flatten_unary(ast, ctx, guard) {
     const casting = {
@@ -74,27 +95,7 @@ function flatten_unary(ast, ctx, guard) {
     }
 
     // Return our result
-    value = cast.op(value);
-
-    switch (typeof value) {
-        case "object":
-            break ;
-        case "string":
-            value = {
-                value,
-                type: "String"
-            };
-            break ;
-        case "true":
-        case "false":
-            value = value ? 1 : 0;
-        case "number":
-            value = {
-                value,
-                type: "Number"
-            };
-            break ;
-    }
+    value = autoType(cast.op(value));
 
     return {
         location: ast.location,
@@ -168,27 +169,7 @@ function flatten_binary(ast, ctx, guard) {
     }
 
     // Return result and wrap it
-    let value = cast.op(left, right);
-
-    switch (typeof value) {
-        case "object":
-            break ;
-        case "string":
-            value = {
-                value,
-                type: "String"
-            };
-            break ;
-        case "true":
-        case "false":
-            value = value ? 1 : 0;
-        case "number":
-            value = {
-                value,
-                type: "Number"
-            };
-            break ;
-    }
+    let value = autoType(cast.op(left, right));
 
     return {
         location: ast.location,
@@ -397,7 +378,7 @@ async function* lazy_evaluate_pass(ctx, feed) {
 }
 
 module.exports = {
-    isValueType,
+    isValueType, autoType,
     asNumber, asString, asTruthy, asName,
 
     evaluate_pass,

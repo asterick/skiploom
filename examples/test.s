@@ -6,7 +6,8 @@
     ;INFO 192 + 256
 
     ;EXTERN (CODE, SHORT) poopiedoop
-    ;INCLUDE "./include.s" ;USING "text.transform.js"
+    INCLUDE "./include.s"
+    INCLUDE "./include.s" USING "text.transform.js"
 
     ;MSG 1
     ;WARN 2

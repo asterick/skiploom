@@ -11,7 +11,7 @@ const {
 } = require ("../util/logging.js");
 
 const {
-    isValueType,
+    isValueType, autoType,
     asName, asNumber, asString, asTruthy,
     evaluate_pass, lazy_evaluate_pass
 } = require("./passes/evaluate.js");
@@ -45,9 +45,6 @@ function defines(... pairs) {
 
 class AssemblerContext {
     constructor() {
-        this.parserSource = {
-            source: "command-line"
-        };
     }
 
     async prospect(scope, ast) {
@@ -79,7 +76,14 @@ class AssemblerContext {
                 switch (token.type) {
                 // Assembly flow control
                 case "IncludeDirective":
-                    yield* this.process(scope, this.include(asString(token.path), token.transform ? asString(token.transform) : undefined));
+                    {
+                        console.log(token);
+                        const context = scope.clone();
+                        const feed = this.include(context, asString(token.path), token.transform ? asString(token.transform) : undefined);
+                        console.log(asString(token.transform) || undefined);
+
+                        yield* this.process(context, feed);
+                    }
                     break ;
                 case "EndDirective":
                     yield token;
@@ -291,9 +295,11 @@ class AssemblerContext {
                     break ;
 
                 // Display directives
-                //case "MessageDirective":
-                //case "WarningDirective":
-                //case "FailureDirective":
+                case "MessageDirective":
+                case "WarningDirective":
+                case "FailureDirective":
+                    //console.log(token);
+                    break ;
 
                 //case "DispatchDirective":
                 //case "SectionDirective":
@@ -321,17 +327,16 @@ class AssemblerContext {
         }
     }
 
-    async* include (target, loader_location = 'text.loader.js') {
+    async* include (scope, target, loader_location = 'text.loader.js') {
         // Import our source transform
-        const root = this.parserSource.path ? path.dirname(this.parserSource.path) : process.cwd();
+        const root = scope.parserSource.path ? path.dirname(scope.parserSource.path) : process.cwd();
         const loader = require(await resolve(loader_location));
         const fn = await resolve(target, root);
 
         // Isolate our namespace
-        const previous = this.parserSource;
-        this.parserSource = {
+        scope.parserSource = {
             loader: loader_location,
-            includedFrom: this.parserSource,
+            includedFrom: scope.parserSource,
             path: fn
         };
 
@@ -341,11 +346,9 @@ class AssemblerContext {
                 continue ;
             }
 
-            block.location.parserSource = this.parserSource
+            block.location.parserSource = scope.parserSource
             yield block;
         }
-
-        this.parserSource = previous;
     }
 
     async* process(scope, tree) {
@@ -379,22 +382,17 @@ class AssemblerContext {
 
     async assemble(path, globals)
     {
-        const scope = new Context({
+        const parserSource = { source: "defaults" };
+        const scope = new Context({ parserSource }, {
             radix: {
-                export:
-                false, value: {
-                    type: "Number",
-                    value: 10,
-                    location: {
-                        parserSource: { source: "defaults" }
-                    }
-                }
+                export: false,
+                value: autoType(10)
             },
             ... globals
         });
 
         // Load our file
-        const tree = this.include(path);
+        const tree = this.include(scope, path);
 
         // Begin processing file
         for await (let block of this.process(scope, tree)) {

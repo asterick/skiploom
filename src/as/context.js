@@ -5,19 +5,23 @@ const {
 const { uuid } = require("../util/uuid.js");
 
 class Context {
-    constructor (globals, top = null) {
+    constructor (parserSource, globals, top = null) {
         this.name = uuid();
         this.globals = globals;
         this.top = top || Object.create(globals);
+        this.parserSource = parserSource;
     }
 
     radix () {
         return asNumber(this.get('radix').value);
     }
 
+    clone () {
+        return new Context(this.parserSource, this.globals, this.top);
+    }
+
     nest () {
-        const ctx = new Context(this.globals, Object.create(this.top));
-        return ctx;
+        return new Context(this.parserSource, this.globals, Object.create(this.top), this.parserSource);
     }
 
     local(name) {
@@ -94,7 +98,7 @@ class Context {
         }
 
         // Create a mirrored context (mutable)
-        return new Context(globals, target);
+        return new Context(this.parserSource, globals, target);
     }
 
     // Conditionally combine mirrored contexts
