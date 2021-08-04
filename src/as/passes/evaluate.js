@@ -13,11 +13,7 @@ function flatten_function_call(ast, ctx, guard) {
     const calls = {
         /* TODO: FUNCTION CALLS
         "LOW":
-        "LST":
         "HIGH":
-        "MAC":
-        "MODEL":
-        "MXP":
         */
         "ARG": (v) => {
             const index = asNumber(v);
@@ -34,13 +30,18 @@ function flatten_function_call(ast, ctx, guard) {
         "CPAG": (v) => ((asNumber(v) >> 15) & 0xFF),
         "CAT": (a, b) => (asString(a)+asString(b)),
         "CNT": () => (ctx.macro_parameters ? ctx.macro_parameters.length : 0),
-        "DEF": (n) => (ctx.get(asString(n)) !== undefined),
+        "DEF": (n) => (ctx.get(asName(n)) !== undefined),
         "DADDR": (p, o) => ((asNumber(o) & 0xFFFF) | ((asNumber(p) & 0xFF) << 16)),
         "DOFF": (v) => (asNumber(v) & 0xFFFF),
         "DPAG": (v) => ((asNumber(v) >> 16) & 0xFF),
         "LEN": (v) => asString(v).length,
+        "MAC": (n) => {
+            const variable = ctx.get(asName(n));
+            return (variable && variable.macro) || false;
+        },
         "MAX": (...args) => Math.max(... args.map(asNumber)),
         "MIN": (...args) => Math.min(... args.map(asNumber)),
+        "MXP": () => (ctx.macro_parameters ? true: false),
         "POS": (v, s, start) => asString(v).indexOf(asString(s), start ? asNumber(start) : 0),
         "SCP": (a, b) => (asString(a) == asString(b)),
         "SGN": (val) => Math.sign(asNumber(val)),
@@ -49,6 +50,10 @@ function flatten_function_call(ast, ctx, guard) {
             return asString(string).substring(first, first+asNumber(length))
         }
     };
+
+    if (!calls[ast.name]) {
+        throw "Unknown function name ${ast.name}";
+    }
 
     // Calculate parameters and abort if not final
     const parameters = (ast.parameters||[]).map((v) => flatten(v, ctx, true, guard));
