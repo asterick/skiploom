@@ -5,7 +5,8 @@ const {
     Message
 } = require ("../../util/logging.js");
 
-async function* lazy(pass, ctx, feed) {
+// This simply blocks execution until the entire pass has run
+async function* lazy(feed) {
     let blocks = [];
 
     // Run through entire scope before lazy evaluating tree
@@ -18,15 +19,18 @@ async function* lazy(pass, ctx, feed) {
         blocks.push(block);
     }
 
-    yield* pass(ctx, blocks);
+    yield* blocks;
 }
 
 async function* assemble(ctx, tree, warn = true) {
-    // Run through the various passes
+    // First pass
     tree = passes.evaluate(ctx, tree);
     tree = passes.localize(ctx, tree);
-    tree = lazy(passes.evaluate, ctx, tree);
-    tree = passes.localize(ctx, tree);          // This simply reruns against IF statements
+    tree = lazy(tree);
+
+    // Second pass
+    tree = passes.evaluate(ctx, tree);
+    tree = passes.localize(ctx, tree);
     tree = passes.macro(ctx, tree);
     tree = passes.finalize(ctx, tree);
 

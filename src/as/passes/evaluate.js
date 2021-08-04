@@ -229,8 +229,8 @@ function flatten(ast, ctx, propegate, guard) {
             variable.used = true;
 
             // Do not resolve symbols outside scope
-            if (!variable.global || !ctx.isNear(ast.name)) {
-                //return ast;
+            if (!variable.global && !ctx.isNear(ast.name)) {
+                return ast;
             }
 
             // Implied forward decl

@@ -67,13 +67,8 @@ async function* macro(scope, feed) {
                         continue ;
                     }
 
-                    // Check if we are ready to kick this off
-                    const { parameters } = token;
-                    if (!parameters.every(isValueType)) {
-                        throw new Message(LEVEL_FAIL, token.location, `Cannot evaluate macro: unknown values as parameters`);
-                    }
-
                     // Validate parameters
+                    const { parameters } = token;
                     const macro = variable.value;
                     if (macro.parameters.length > parameters.length) {
                         throw new Message(LEVEL_FAIL, token.location, `Expected at least ${macro.parameters.length} arguments, found ${parameters.length}`);
