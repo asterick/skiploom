@@ -40,7 +40,7 @@ function defines(... pairs) {
     }, {});
 }
 
-async function assemble_file(path, globals)
+async function* assemble_file(path, globals)
 {
     // Setup our default context
     const scope = new Context({
@@ -54,19 +54,7 @@ async function assemble_file(path, globals)
     // Load our file
     const location = { source: "command-line" };
     const tree = passes.include(location, path);
-
-    // Begin processing file
-    for await (let block of passes.assemble(scope, tree)) {
-        // Emitted a log message
-        if (block instanceof Message) {
-            console.log(block.toString());
-            if (block.level == LEVEL_FATAL) return ;
-            continue ;
-        }
-
-        // This is for a future pass
-        //console.log(block);
-    }
+    yield* passes.assemble(scope, tree);
 }
 
 async function* assemble({ files, define }) {
@@ -74,7 +62,18 @@ async function* assemble({ files, define }) {
 
     for (let fn of files) {
         // Create a new variable scope (protect globals)
-        await assemble_file(fn, globals);
+        for await (block of assemble_file(fn, globals)) {
+            // Emitted a log message
+            if (block instanceof Message) {
+                console.log(block.toString());
+
+                if (block.level == LEVEL_FATAL) return ;
+
+                continue ;
+            }
+
+            console.log(block)
+        }
     }
 }
 

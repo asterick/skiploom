@@ -10,6 +10,7 @@ async function* assemble(scope, tree, warn = true) {
     tree = passes.evaluate(scope, tree);
     tree = passes.localize(scope, tree);
     tree = passes.lazy_evaluate(scope, tree);
+    tree = passes.finalize(scope, tree);
 
     // Pass through the results
     yield* tree;

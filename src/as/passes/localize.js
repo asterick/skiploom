@@ -45,9 +45,6 @@ async function* localize(scope, feed) {
                     yield* passes.assemble(context, feed, false);
                 }
                 break ;
-            case "EndDirective":
-                yield token;
-                return ;
             case "RadixDirective":
                 {
                     const variable = scope.global('radix');
@@ -244,36 +241,18 @@ async function* localize(scope, feed) {
                 break ;
 
             // Macro Directives
-            //case "CountDupDirective":
-            //case "ListDupDirective":
-            //case "CharacterDupDirective":
-            //case "SequenceDupDirective":
-            //case "MacroDefinitionDirective":
-            //case "PurgeMacrosDirective":
-            case "ExitMacroDirective":
-                yield new Message(LEVEL_FAIL, token.location, "Misplaced EXITM, Must be used inside of a macro");
-                break ;
-
-            // Display directives
-            case "MessageDirective":
-            case "WarningDirective":
-            case "FailureDirective":
-                //console.log(token);
-                break ;
-
-            //case "DispatchDirective":
-            //case "SectionDirective":
-            //case "AlignDirective":
-            //case "NameDirective":
-            //case "AsciiBlockDirective":
-            //case "TerminatedAsciiBlockDirective":
-            //case "DataBytesDirective":
-            //case "DataWordsDirective":
-            //case "DataAllocateDirective":
-            //case "DefineSectionDirective":
-            default:
+            case "CountDupDirective":
+            case "ListDupDirective":
+            case "CharacterDupDirective":
+            case "SequenceDupDirective":
+            case "MacroDefinitionDirective":
+            case "PurgeMacrosDirective":
                 yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: localize) ${token.type}`);
-                break ;
+                break
+
+            default:
+                // Forward to next phase
+                yield token;
             }
         } catch(msg) {
             if (msg instanceof Message) {

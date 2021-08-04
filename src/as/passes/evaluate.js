@@ -212,11 +212,6 @@ async function* evaluate(ctx, tree) {
                     value: evaluate_statement(ctx, token.value)
                 });
                 break ;
-            case "EndDirective":
-                // This terminates the assembler, so discard anything that comes after
-                // bubble up so it terminates through all scopes
-                yield token;
-                return ;
 
             // Variable Directives
             case "LocalDirective":
@@ -264,7 +259,6 @@ async function* evaluate(ctx, tree) {
             //case "SequenceDupDirective":
             //case "MacroDefinitionDirective":
             //case "PurgeMacrosDirective":
-            //case "ExitMacroDirective":
 
             //case "DispatchDirective":
             //case "SectionDirective":
@@ -275,17 +269,7 @@ async function* evaluate(ctx, tree) {
             //case "DataWordsDirective":
             //case "DataAllocateDirective":
             //case "DefineSectionDirective":
-                console.log(token);
-                break ;
-
-            // Internal Object pass-throughs
-            case "Fragment":
-                yield token;
-                break ;
-
-            default:
                 throw new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: evaluate) ${token.type}`);
-                break ;
             }
 
             yield token;

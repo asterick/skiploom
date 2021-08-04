@@ -1,2 +1,2 @@
-S EQU 9
-MSG "Howdy fans"
+S SET 9
+MSG "Howdy fans", S
