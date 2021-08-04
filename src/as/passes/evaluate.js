@@ -13,8 +13,6 @@ const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require (".
 function flatten_function_call(ast, ctx, guard) {
     const calls = {
         /* TODO: FUNCTION CALLS
-        "ARG":
-        "CNT":
         "COFF":
         "CPAG":
         "DADDR:
@@ -26,19 +24,31 @@ function flatten_function_call(ast, ctx, guard) {
         "LOW":
         "LST":
         "MAC":
-        "MAX":
-        "MIN":
         "MODEL":
         "MXP":
-        "POS":
-        "SCP":
-        "SGN":
-        "SUB":
         */
+        "ARG": (v) => {
+            const index = asNumber(v);
+            if (!ctx.macro_parameters || index >= ctx.macro_parameters.length) {
+                throw `Argument ${index} is out of bounds`
+            }
+
+            return ctx.macro_parameters[index];
+        },
         "ABS": (v) => Math.abs(asNumber(v)),
         "AS88": () => "AS88 (node remake)",
         "CADDR": (p, o) => (asNumber(o) & 0x7FFF) | ((asNumber(o) & 0x8000) ? (asNumber(p) << 15) : 0),
-        "CAT": (a, b) => (asString(a)+asString(b))
+        "CAT": (a, b) => (asString(a)+asString(b)),
+        "CNT": () => (ctx.macro_parameters ? ctx.macro_parameters.length : 0),
+        "MAX": (...args) => Math.max(... args.map(asNumber)),
+        "MIN": (...args) => Math.min(... args.map(asNumber)),
+        "POS": (v, s, start) => asString(v).indexOf(asString(s), start ? asNumber(start) : 0),
+        "SCP": (a, b) => (asString(a) == asString(b)),
+        "SGN": (val) => Math.sign(asNumber(val)),
+        "SUB": (string, start, length) => {
+            const first = asNumber(start)
+            return asString(string).substring(first, first+asNumber(length))
+        }
     };
 
     // Calculate parameters and abort if not final

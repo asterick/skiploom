@@ -1,7 +1,8 @@
     Z EQU 123
 
-    MSG @CADDR(3, 0800Ah)
-    MSG @CAT("hello", "world")
+    MSG @SUB('S1C88!',3,2)
+    MSG @SGN(-5)
+    MSG @POS('S1C88','88')
 
     loop DUP 5
     ;WARN "Just some warnings for ya: ", loop
@@ -25,7 +26,10 @@ TEST_M MACRO A, B, C, D
     I\%C SET 3
     DB I\A, I\?B, I\%C
     DW 1,2,3
+        DUPF count, 3, @CNT() - 1
+            MSG "Argument: ", count, " ", @ARG(count)
+        ENDM
     ENDM
 
-    TEST_M Z, Z, Z, Z, Z
+    TEST_M Z, Z, Z, 1, 2, 3
     PMACRO TEST_M

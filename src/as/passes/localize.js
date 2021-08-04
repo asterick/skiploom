@@ -290,16 +290,22 @@ async function* localize(scope, feed) {
                         continue ;
                     }
 
+                    // Check if we are ready to kick this off
+                    const { parameters } = token;
+                    if (!parameters.every(isValueType)) {
+                        throw new Message(LEVEL_FAIL, token.location, `Cannot evaluate macro: unknown values as parameters`);
+                    }
+
                     // Validate parameters
                     const macro = variable.value;
-                    const { parameters } = token;
                     if (macro.parameters.length > parameters.length) {
                         throw new Message(LEVEL_FAIL, token.location, `Expected at least ${macro.parameters.length} arguments, found ${parameters.length}`);
                     }
 
                     // Setup context
                     const ctx = scope.nest();
-                    // PRESERVE PARAMETERS AS A LIST
+                    ctx.macro_parameters = parameters;
+
                     for (const [i, name] of macro.parameters.entries()) {
                         Object.assign(ctx.local(name), {
                             location: macro.location,
@@ -399,7 +405,7 @@ async function* localize(scope, feed) {
                     const variable = asName(token.variable);
                     const start = token.start ? asNumber(token.start) : 0;
                     const end = asNumber(token.end);
-                    const step = token.end ? asNumber(token.step) : 1;
+                    const step = token.step ? asNumber(token.step) : 1;
 
                     let count = start;
                     let iteration = 0;
