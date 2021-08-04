@@ -3,6 +3,7 @@ const path = require("path");
 const { resolve } = require("../util/resolve.js");
 const { expressionParser } = require("./parsers.js");
 const { Scope } = require("./scope.js");
+const { uuid } = require("../util/uuid.js");
 
 const {
     LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
@@ -40,11 +41,6 @@ function defines(... pairs) {
 
         return acc;
     }, {});
-}
-
-function uuid() {
-    // TODO: Return actual UUID
-    return "some-uuid";
 }
 
 class AssemblerContext {

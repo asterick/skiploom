@@ -1,5 +1,8 @@
+const { uuid } = require("../util/uuid.js");
+
 class Scope {
     constructor (globals, top = null) {
+        this.name = uuid();
         this.globals = globals;
         this.top = top || Object.create(globals);
     }

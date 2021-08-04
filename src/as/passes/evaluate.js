@@ -52,9 +52,59 @@ function asTruthy(ast) {
     }
 
 function flatten_unary(ast, scope, guard) {
-    const value = flatten(ast.value, scope, true, guard);
+    // TODO: LOCALIZING MACRO NEEDS TO WORK
+    const casting = {
+        "MacroLocalConcat":     { value:   asName, op: (v) => ({ type: "Identifier", name: `${scope.name} \0 ${v}` }) },
+        "LogicalNot":           { value: asTruthy, op: (v) => v },
+        "BitwiseComplement":    { value: asNumber, op: (v) => ~v },
+        "Negate":               { value: asNumber, op: (v) => -v },
+        "Positive":             { value: asNumber, op: (v) => v },
+    };
 
-    throw ast;
+    const cast = casting[ast.op];
+    let value = flatten(ast.value, scope, cast.value == asName, guard);
+
+    // Value can be an identifier
+    if (cast.value == asName) {
+        if (value.type != "Identifier") {
+            return { ... ast, value };
+        }
+    } else if (isValueType(value)) {
+        return { ... ast, value };
+    }
+
+    if (cast.value) {
+        value = cast.value(value);
+    }
+
+    // Return our result
+    value = cast.op(value);
+    console.log(value);
+
+    switch (typeof value) {
+        case "object":
+            break ;
+        case "string":
+            value = {
+                value,
+                type: "String"
+            };
+            break ;
+        case "true":
+        case "false":
+            value = value ? 1 : 0;
+        case "number":
+            value = {
+                value,
+                type: "Number"
+            };
+            break ;
+    }
+
+    return {
+        location: ast.location,
+        ... value
+    };
 }
 
 function flatten_binary(ast, scope, guard) {

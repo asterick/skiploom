@@ -1,6 +1,6 @@
     X EQU 1
     Y EQU 2
-    Z\X\?Y SET 3+4
+    ^Z\X\?Y SET -(3+4)
 
     ;Z EQU 192
     ;INFO 192 + 256
