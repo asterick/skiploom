@@ -14,8 +14,6 @@ function flatten_function_call(ast, ctx, guard) {
     const calls = {
         /* TODO: FUNCTION CALLS
         "ARG":
-        "CADDR":
-        "CAT":
         "CNT":
         "COFF":
         "CPAG":
@@ -38,11 +36,14 @@ function flatten_function_call(ast, ctx, guard) {
         "SUB":
         */
         "ABS": (v) => Math.abs(asNumber(v)),
-        "AS88": () => "AS88 (node remake)"
+        "AS88": () => "AS88 (node remake)",
+        "CADDR": (p, o) => (asNumber(o) & 0x7FFF) | ((asNumber(o) & 0x8000) ? (asNumber(p) << 15) : 0),
+        "CAT": (a, b) => (asString(a)+asString(b))
     };
 
     // Calculate parameters and abort if not final
     const parameters = (ast.parameters||[]).map((v) => flatten(v, ctx, true, guard));
+
     if (!parameters.every(isValueType)) {
         return { ... ast, parameters };
     }

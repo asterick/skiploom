@@ -293,16 +293,19 @@ async function* localize(scope, feed) {
                     // Validate parameters
                     const macro = variable.value;
                     const { parameters } = token;
-                    if (macro.parameters.length != parameters.length) {
-                        throw new Message(LEVEL_FAIL, token.location, `Expected ${macro.parameters.legnth} arguments, found ${parameters.length}`);
+                    if (macro.parameters.length > parameters.length) {
+                        throw new Message(LEVEL_FAIL, token.location, `Expected at least ${macro.parameters.length} arguments, found ${parameters.length}`);
                     }
 
                     // Setup context
                     const ctx = scope.nest();
+                    // PRESERVE PARAMETERS AS A LIST
                     for (const [i, name] of macro.parameters.entries()) {
-                        const variable = ctx.local(name);
-                        variable.location = macro.location;
-                        variable.value = parameters[i];
+                        Object.assign(ctx.local(name), {
+                            location: macro.location,
+                            value: parameters[i],
+                            used: true
+                        });
                     }
 
                     // Assemble sub-block
@@ -319,6 +322,7 @@ async function* localize(scope, feed) {
                         const ctx = scope.nest();
                         if (counter) {
                             Object.assign(ctx.local(counter), {
+                                used: true,
                                 location: token.location,
                                 value: { type: "Number", value }
                             });
@@ -340,12 +344,14 @@ async function* localize(scope, feed) {
 
                         if (counter) {
                             Object.assign(ctx.local(counter), {
+                                used: true,
                                 location: token.location,
                                 value: { type: "Number", value: iteration++ }
                             });
                         }
 
                         Object.assign(ctx.local(variable), {
+                            used: true,
                             location: value.location,
                             value
                         });
@@ -369,12 +375,14 @@ async function* localize(scope, feed) {
 
                             if (counter) {
                                 Object.assign(ctx.local(counter), {
+                                    used: true,
                                     location: token.location,
                                     value: { type: "Number", value: iteration++ }
                                 });
                             }
 
                             Object.assign(ctx.local(variable), {
+                                used: true,
                                 location: token.location,
                                 value: { type: "Number", value: string.charCodeAt(idx) }
                             });
@@ -406,12 +414,14 @@ async function* localize(scope, feed) {
 
                         if (counter) {
                             Object.assign(ctx.local(counter), {
+                                used: true,
                                 location: token.location,
                                 value: { type: "Number", value: iteration++ }
                             });
                         }
 
                         Object.assign(ctx.local(variable), {
+                            used: true,
                             location: token.location,
                             value: { type: "Number", value: count }
                         });

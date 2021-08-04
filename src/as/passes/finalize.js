@@ -65,7 +65,6 @@ async function* finalize(scope, tree) {
             case "MessageDirective":
                 if (token.message.every(isValueType)) {
                     yield new Message(LEVEL_INFO, token.location, token.message.map(asString).join(''));
-                    return ;
                 }
                 break ;
             case "WarningDirective":
