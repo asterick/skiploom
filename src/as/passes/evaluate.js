@@ -52,9 +52,8 @@ function asTruthy(ast) {
     }
 
 function flatten_unary(ast, scope, guard) {
-    // TODO: LOCALIZING MACRO NEEDS TO WORK
     const casting = {
-        "MacroLocalConcat":     { value:   asName, op: (v) => ({ type: "Identifier", name: `${scope.name} \0 ${v}` }) },
+        "MacroLocalConcat":     { value:   asName, op: (v) => ({ type: "Identifier", name: `${scope.name}\0${v}` }) },
         "LogicalNot":           { value: asTruthy, op: (v) => v },
         "BitwiseComplement":    { value: asNumber, op: (v) => ~v },
         "Negate":               { value: asNumber, op: (v) => -v },
