@@ -224,7 +224,7 @@ async function* localize(scope, feed) {
                             type: "IfDirective",
                             location: token.location,
                             conditions: conditions.map(({test, body}) => ({ test, body })),
-                            otherwise: (otherwise.length > 0) ? otherwise : null
+                            otherwise: (otherwise && (otherwise.length > 0)) ? otherwise : null
                         };
 
                         // Prospect values

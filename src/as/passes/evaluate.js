@@ -5,7 +5,6 @@ const {
 
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
 
-
 /*
  * Expression evaluation
  */
@@ -13,16 +12,9 @@ const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require (".
 function flatten_function_call(ast, ctx, guard) {
     const calls = {
         /* TODO: FUNCTION CALLS
-        "COFF":
-        "CPAG":
-        "DADDR:
-        "DEF":
-        "DOFF":
-        "DPAG":
-        "HIGH":
-        "LEN":
         "LOW":
         "LST":
+        "HIGH":
         "MAC":
         "MODEL":
         "MXP":
@@ -37,9 +29,16 @@ function flatten_function_call(ast, ctx, guard) {
         },
         "ABS": (v) => Math.abs(asNumber(v)),
         "AS88": () => "AS88 (node remake)",
-        "CADDR": (p, o) => (asNumber(o) & 0x7FFF) | ((asNumber(o) & 0x8000) ? (asNumber(p) << 15) : 0),
+        "CADDR": (p, o) => (asNumber(o) & 0x7FFF) | ((asNumber(o) & 0x8000) ? ((asNumber(p) & 0xFF) << 15) : 0),
+        "COFF": (v) => (asNumber(v) & 0x7FFF),
+        "CPAG": (v) => ((asNumber(v) >> 15) & 0xFF),
         "CAT": (a, b) => (asString(a)+asString(b)),
         "CNT": () => (ctx.macro_parameters ? ctx.macro_parameters.length : 0),
+        "DEF": (n) => (ctx.get(asString(n)) !== undefined),
+        "DADDR": (p, o) => ((asNumber(o) & 0xFFFF) | ((asNumber(p) & 0xFF) << 16)),
+        "DOFF": (v) => (asNumber(v) & 0xFFFF),
+        "DPAG": (v) => ((asNumber(v) >> 16) & 0xFF),
+        "LEN": (v) => asString(v).length,
         "MAX": (...args) => Math.max(... args.map(asNumber)),
         "MIN": (...args) => Math.min(... args.map(asNumber)),
         "POS": (v, s, start) => asString(v).indexOf(asString(s), start ? asNumber(start) : 0),

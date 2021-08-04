@@ -50,8 +50,7 @@ function autoType(value) {
             value,
             type: "String"
         };
-    case "true":
-    case "false":
+    case "boolean":
         value = value ? 1 : 0;
     case "number":
         return {

@@ -1,8 +1,8 @@
     Z EQU 123
 
-    MSG @SUB('S1C88!',3,2)
-    MSG @SGN(-5)
-    MSG @POS('S1C88','88')
+    IF @DEF("Z")
+        MSG "IT EXISTS (but might not have a value yet)"
+    ENDIF
 
     loop DUP 5
     ;WARN "Just some warnings for ya: ", loop
