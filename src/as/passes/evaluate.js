@@ -280,14 +280,18 @@ async function* evaluate(ctx, tree) {
                     parameters: evaluate_statement(ctx, token.parameters, false)
                 });
                 break ;
-            //case "PurgeMacrosDirective":
-
+            case "PurgeMacrosDirective":
+                Object.assign(token, {
+                    names: evaluate_statement(ctx, token.names, false)
+                });
+                break ;
             case "DispatchDirective":
                 Object.assign(token, {
                     call: evaluate_statement(ctx, token.call, false),
                     parameters: evaluate_statement(ctx, token.parameters)
                 });
                 break ;
+
             //case "SectionDirective":
             //case "NameDirective":
             //case "DefineSectionDirective":

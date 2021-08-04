@@ -10,7 +10,7 @@ const UnaryOperations = {
 const BinaryOperations = {
       "\\": "IdentifierConcat",
       "\\?": "ValueConcat",
-      "\\%?": "HexValueConcat",
+      "\\%": "HexValueConcat",
       "||": "LogicalOr",
       "&&": "LogicalAnd",
       "|": "BitwiseOr",

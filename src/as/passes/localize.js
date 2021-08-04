@@ -51,7 +51,7 @@ async function* localize(scope, feed) {
                 {
                     const variable = scope.global('radix');
 
-                    if (variable.frozen) {
+                    if (variable.frozen && variable.value) {
                         throw new Message(LEVEL_FAIL, token.location, `Radix is frozen`)
                     }
 
@@ -82,8 +82,7 @@ async function* localize(scope, feed) {
 
                     for (const attr in token.attributes) {
                         if (variable[attr] && variable[attr] != token.attributes[attr]) {
-                            yield new Message(LEVEL_FAIL, token.location, `Variable ${name} already defines ${attr} property as ${variable[attr]}`)
-                            break ;
+                            throw new Message(LEVEL_FAIL, token.location, `Variable ${name} already defines ${attr} property as ${variable[attr]}`)
                         }
 
                         variable[attr] = token.attributes[attr];
@@ -96,7 +95,7 @@ async function* localize(scope, feed) {
                     const name = asName(token.name);
                     const variable = scope.get(name) || scope.local(name);
 
-                    if (variable.frozen) {
+                    if (variable.frozen && variable.value) {
                         throw new Message(LEVEL_FAIL, token.location, `Cannot set frozen value ${name}`)
                     }
 
@@ -112,7 +111,7 @@ async function* localize(scope, feed) {
                     const name = asName(token.name);
                     const variable = scope.get(name) || scope.global(name);
 
-                    if (variable.value) {
+                    if (variable.value && variable.value) {
                         throw new Message(LEVEL_FAIL, token.location, `Cannot change frozen value ${name}`);
                     }
 
@@ -171,18 +170,16 @@ async function* localize(scope, feed) {
                 continue ;
 
             case "UndefineDirective":
-                {
-                    for (const name of token.names.map(asName)) {
-                        const variable = scope.get(name);
+                for (const name of token.names.map(asName)) {
+                    const variable = scope.get(name);
 
-                        // Warn on undefined values
-                        if (!variable || !variable.define) {
-                            yield new Message(LEVEL_WARN, token.location, `No definition named ${name}`);
-                            continue ;
-                        }
-
-                        variable.remove(name);
+                    // Warn on undefined values
+                    if (!variable || !variable.define) {
+                        throw new Message(LEVEL_WARN, token.location, `No definition named ${name}`);
+                        continue ;
                     }
+
+                    variable.remove(name);
                 }
                 continue ;
 
@@ -245,15 +242,76 @@ async function* localize(scope, feed) {
                 continue ;
 
             // Macro Directives
+            case "MacroDefinitionDirective":
+                {
+                    const name = asName(token.name);
+                    const body = token.body;
+                    const macro = scope.local(name);
+
+                    if (macro.frozen && macro.value) {
+                        throw new Message(LEVEL_WARN, token.location, `Cannot reassign frozen value ${name} to macro`);
+                    }
+
+                    Object.assign(macro, {
+                        macro: true,
+                        value: {
+                            location: token.location,
+                            parameters: token.parameters.map(asName),
+                            body
+                        }
+                    });
+                }
+                continue ;
+            case "PurgeMacrosDirective":
+                for (const name of token.names.map(asName)) {
+                    const variable = scope.get(name);
+
+                    if (!variable || !variable.macro) {
+                        throw new Message(LEVEL_WARN, token.location, `No macro named ${name}`);
+                        continue ;
+                    }
+
+                    scope.remove(name);
+                }
+                continue ;
+            case "DispatchDirective":
+                {
+                    const call = asName(token.call);
+                    const variable = scope.get(call);
+
+                    // If no macro is found, assume this is a assembly instruction
+                    if (!variable || !variable.macro) {
+                        // This is likely just an opcode
+                        yield token;
+                        continue ;
+                    }
+
+                    // Validate parameters
+                    const macro = variable.value;
+                    const { parameters } = token;
+                    if (macro.parameters.length != parameters.length) {
+                        throw new Message(LEVEL_FAIL, token.location, `Expected ${macro.parameters.legnth} arguments, found ${parameters.length}`);
+                    }
+
+                    // Setup context
+                    const ctx = scope.nest();
+                    for (const [i, name] of macro.parameters.entries()) {
+                        const variable = ctx.local(name);
+                        variable.value = parameters[i];
+                    }
+
+                    // Assemble sub-block
+                    yield* passes.assemble(ctx, macro.body);
+                }
+                continue ;
+
+
+            // TODO: Unimplemented tokens
             case "CountDupDirective":
             case "ListDupDirective":
             case "CharacterDupDirective":
             case "SequenceDupDirective":
-            case "MacroDefinitionDirective":
-            case "DispatchDirective":
-            case "PurgeMacrosDirective":
-                yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: localize) ${token.type}`);
-                continue ;
+                throw new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: localize) ${token.type}`);
             }
 
             // Forward to next phase

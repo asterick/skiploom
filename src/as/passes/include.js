@@ -20,9 +20,10 @@ async function* include (location, target, module = 'text.loader.js') {
 
     // Isolate our namespace
     const source_location = {
+        source: "include",
         loader: module,
         path: fn,
-        ... location
+        parent: location
     };
 
     // Tag all our outbound blocks as being from this process

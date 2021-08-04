@@ -29,7 +29,7 @@ class Context {
             throw `Global ${name} is already defined`;
         } else if (!this.top.hasOwnProperty(name)) {
             // Empty local container
-            this.top[name] = { };
+            this.top[name] = {};
         }
 
         return this.top[name];
