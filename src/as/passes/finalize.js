@@ -97,8 +97,8 @@ async function* finalize(scope, tree) {
                 break ;
 
             // These are the unimplemented bits
-            case "DataAllocateDirective":
             case "DispatchDirective":
+            case "DataAllocateDirective":
             case "SectionDirective":
             case "AlignDirective":
             case "NameDirective":
@@ -107,7 +107,7 @@ async function* finalize(scope, tree) {
                 yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: finalize) ${token.type}`);
 
             default:
-                yield token ;
+                yield token;
             }
         } catch(msg) {
             if (msg instanceof Message) {

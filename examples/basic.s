@@ -17,6 +17,7 @@ _main:
         LD      ep,#00h
         LD      [02080H],l
         LD      [BR:020h], #0FFh
+forever:        JRS NZ, forever
         RET
 
         EXTERN  (CODE, SHORT) __START
