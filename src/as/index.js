@@ -48,8 +48,6 @@ class AssemblerContext {
         this.parserSource = {
             source: "command-line"
         };
-
-        this.incomplete = [];
     }
 
     async prospect(scope, ast) {

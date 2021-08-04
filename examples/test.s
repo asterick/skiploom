@@ -1,6 +1,4 @@
-    RADIX 8
     X EQU 10
-    RADIX 10d
     Y EQU 2
     ^Z\X\?Y SET -(3+4)
 
@@ -28,8 +26,8 @@
     LOCAL  B
     DEFINE C 'bert'
 
-    B SET #01
-    B SET B + 2
+    ;B SET #01
+    ;B SET B + 2
 
     IF 0
         WARN "This does nothing"

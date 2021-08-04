@@ -127,13 +127,15 @@ class Context {
                 if (true_val && false_val) {
                     // If the value has changed, We need to setup a conditional
                     if (here[name].value != true_val || true_val != false_val) {
-                        // This has no location yet
-                        here[name].value = {
-                            type: "TernaryOperation",
-                            test,
-                            onTrue: onTrue[name].value,
-                            onFalse: onFalse[name].value,
-                        }
+                        Object.assign(here[name], {
+                            used: (here[name].used || onTrue[name].used || onFalse[name].used),
+                            value: {
+                                type: "TernaryOperation",
+                                test,
+                                onTrue: onTrue[name].value,
+                                onFalse: onFalse[name].value,
+                            }
+                        });
                     }
                 } else if (!true_val && !false_val) {
                     // Both sides were undefined
