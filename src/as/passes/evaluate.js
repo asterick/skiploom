@@ -5,7 +5,6 @@ const {
 
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
 
-// TODO: FUNCTION CALLS
 
 /*
  * Expression evaluation
@@ -13,6 +12,32 @@ const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require (".
 
 function flatten_function_call(ast, ctx, guard) {
     const calls = {
+        /* TODO: FUNCTION CALLS
+        "ARG":
+        "CADDR":
+        "CAT":
+        "CNT":
+        "COFF":
+        "CPAG":
+        "DADDR:
+        "DEF":
+        "DOFF":
+        "DPAG":
+        "HIGH":
+        "LEN":
+        "LOW":
+        "LST":
+        "MAC":
+        "MAX":
+        "MIN":
+        "MODEL":
+        "MXP":
+        "POS":
+        "SCP":
+        "SGN":
+        "SUB":
+        */
+        "ABS": (v) => Math.abs(asNumber(v)),
         "AS88": () => "AS88 (node remake)"
     };
 
