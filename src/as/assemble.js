@@ -6,65 +6,36 @@ const {
 const { lookup, Arguments, Instructions } = require("../util/table.js");
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../util/logging.js");
 
+function as(type, v) {
+    const array = new type([v]);
+
+    if (v != array[0]) {
+        throw `${v} is too large of a constant`
+    }
+
+    return array;
+}
+
 function lookup_indirect_register(op_name, register, offset) {
-    if (register.type == "Register" && register.register == "BR" && offset.type == "Number") {
-        return [ Arguments.MEM_BR, offset.value ];
+    if (register.type == "Register" && register.register == "BR") {
+        if (offset.type == "Number") {
+            return [ Arguments.MEM_BR, offset.value ];
+        } else {
+            // TODO: Lazy evaluate
+            return null
+        }
+    } else {
+        throw `Cannot perform indirect register offset access`;
     }
-
-    return null;
-}
-
-function asSignedShort(v) {
-    if (v > 0x7FFF || v < -0x8000) {
-        throw `${v} is too large to fit inside signed byte`
-    }
-
-    return [v & 0xFF];
-}
-
-
-function asSignedByte(v) {
-    if (v > 0x7F || v < -0x80) {
-        throw `${v} is too large to fit inside signed byte`
-    }
-
-    return [v & 0xFF];
-}
-
-function asShort(v) {
-    if (v > 0xFFFF || v < 0) {
-        throw `${v} is too large to fit inside signed byte`
-    }
-
-    return [v & 0xFF, v >> 8];
-}
-
-function asByte(v) {
-    if (v > 0xFF || v < 0) {
-        throw `${v} is too large to fit inside signed byte`
-    }
-
-    return [v];
 }
 
 function lookup_indirect_offset(param, op, left, right) {
     if (left.type != "Register") {
+        // TODO: Deferred based absolute address
         return null;
     }
 
-    if (right.type == "Number") {
-        if (op != "Add" && op != "Subtract") {
-            throw `Invalid offset operation ${op}`;
-        }
-
-        switch (left.register) {
-            case "SP": return [ Arguments.MEM_SP_DISP, asSignedByte(op == "Add" ? right.value : -right.value) ];
-            case "IX": return [ Arguments.MEM_IX_DISP, asSignedByte(op == "Add" ? right.value : -right.value) ];
-            case "IY": return [ Arguments.MEM_IY_DISP, asSignedByte(op == "Add" ? right.value : -right.value) ];
-            default:
-                throw `Cannot index register ${left.register}`;
-        }
-    } else if (right.type == "Register") {
+    if (right.type == "Register") {
         if (op != "Add") {
             throw `Invalid offset operation ${op}`;
         }
@@ -80,7 +51,20 @@ function lookup_indirect_offset(param, op, left, right) {
                 throw `Cannot index register ${left.register}`;
         }
     } else {
-        return null;
+        if (op != "Add" && op != "Subtract") {
+            throw `Invalid offset operation ${op}`;
+        } else if (right.type != "Number") {
+            // TODO: Deferred offset evaluation
+            return null;
+        }
+
+        switch (left.register) {
+            case "SP": return [ Arguments.MEM_SP_DISP, as(Int8Array, op == "Add" ? right.value : -right.value) ];
+            case "IX": return [ Arguments.MEM_IX_DISP, as(Int8Array, op == "Add" ? right.value : -right.value) ];
+            case "IY": return [ Arguments.MEM_IY_DISP, as(Int8Array, op == "Add" ? right.value : -right.value) ];
+            default:
+                throw `Cannot index register ${left.register}`;
+        }
     }
 }
 
@@ -97,11 +81,14 @@ function lookup_indirect(op_name, param) {
             throw `Cannot access memory with register ${param.register}`;
         }
     case "Number":
-        return (op_name == "JP") ?
-            [ Arguments.MEM_VECTOR, asByte(param.value) ] : [ Arguments.MEM_ABS, asShort(param.value) ];
-    default:
-        throw `Cannot access address by ${param.type}`;
+        if (op_name == "JP") {
+            return [ Arguments.MEM_VECTOR, as(Uint8Array, param.value) ];
+        } else {
+            return [ Arguments.MEM_ABS, as(Uint16Array, param.value) ];
+        }
     }
+
+    return null;
 }
 
 function lookup_param(op_name, param) {
@@ -182,12 +169,13 @@ function* assemble(token) {
 
         // Validate the argument
         for (let p of parameters) {
-            if (!p) {
+            const output = lookup_param(op_name, p);
+            if (!output) {
                 yield token;
                 return ;
             }
 
-            const [arg, data] = lookup_param(op_name, p);
+            const [arg, data] = output;
             key.push(arg);
             if (data !== null) imms.push(data);
         }
@@ -198,27 +186,24 @@ function* assemble(token) {
             throw `Illegal instruction`;
         }
 
-        // Calculate our bytecode
-        const result = [... op.code];
+        // Emit our opcode
+        yield op.code.buffer;
         for (let imm of imms) {
             if (typeof imm == "number") {
                 switch (op.size) {
                     case 8:
-                        imm = (op.signed ? asSignedByte(imm) : asByte(imm));
+                        imm = as(op.signed ? Int8Array : Uint8Array, imm);
                         break ;
                     case 16:
-                        imm = (op.signed ? asSignedShort(imm) : asShort(imm));
+                        imm = as(op.signed ? Int16Array : Uint16Array, imm);
                         break ;
                 }
             }
 
-            result.push(... imm);
+            yield imm.buffer;
         }
-
-        // Emit bytecode for instruction
-        yield new Uint8Array(result);
     } else {
-        yield new Uint8Array(table[0].code);
+        yield table[0].code.buffer;
     }
 }
 

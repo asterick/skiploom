@@ -124,7 +124,7 @@ with open(os.path.join(os.path.dirname(__file__), 's1c88.csv'), 'r') as csvfile:
     for op, table in ops.items():
         print ("\t'%s': {" % op)
         for (index, entry) in table:
-            print ("\t\t[%s]: %s," % (index, dumps(entry)))
+            print ("\t\t[%s]: { code: new Uint8Array([%s]), signed: %s, size: %s }," % (index, ', '.join([str(c) for c in entry['code']]), entry['signed'] and 'true' or 'false', entry['size'] or 'null'))
             pass
         print ("\t},")
     print ("};\n")
