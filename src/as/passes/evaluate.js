@@ -1,73 +1,13 @@
-const { keywords } = require("moo");
+const {
+    isValueType, autoType,
+    asNumber, asString, asTruthy, asName,
+} = require("../helper.js");
+
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
 
 /*
  * Expression evaluation
  */
-
-function isValueType(ast) {
-    return ast.type == "Number" || ast.type == "String";
-}
-
-function asName(ast) {
-    if (ast.name) {
-        return ast.name
-    }
-
-    throw `Expression does not have a name`;
-}
-
-function asString(ast) {
-    switch (ast.type) {
-    case "String":
-        return ast.value;
-    case "Number":
-        return ast.value.toString();
-    default:
-        throw `Cannot coerse ${ast.type} to string`;
-    }
-}
-
-function asNumber(ast) {
-    switch (ast.type) {
-    case "Number":
-        return ast.value;
-    default:
-        throw `Cannot coerse ${ast.type} to number`;
-    }
-}
-
-function asTruthy(ast) {
-    switch (ast.type) {
-    case "Number":
-        return ast.value != 0;
-    case "String":
-        return ast.value !== "";
-    default:
-        throw `Cannot coerse ${ast.type} to number`;
-    }
-}
-
-function autoType(value) {
-    switch (typeof value) {
-    case "object":
-        return value ;
-    case "string":
-        return {
-            value,
-            type: "String"
-        };
-    case "true":
-    case "false":
-        value = value ? 1 : 0;
-    case "number":
-        return {
-            value,
-            type: "Number"
-        };
-        break ;
-    }
-}
 
 function flatten_unary(ast, ctx, guard) {
     const casting = {
@@ -241,12 +181,12 @@ function flatten(ast, ctx, propegate, guard) {
     }
 }
 
-function evaluate(ctx, tree, propegate = true) {
+function evaluate_statement(ctx, tree, propegate = true) {
     // Helper functions for arrays an falsy values
     if (tree == null) {
         return tree;
     } else if (Array.isArray(tree)) {
-        return tree.map((idx) => evaluate(ctx, idx, propegate));
+        return tree.map((idx) => evaluate_statement(ctx, idx, propegate));
     } else if (tree === undefined) {
         throw "Attempted to evaluate an undefined field"
     }
@@ -255,21 +195,21 @@ function evaluate(ctx, tree, propegate = true) {
     return flatten(tree, ctx, propegate, []);
 }
 
-async function* evaluate_pass(ctx, tree) {
+async function* evaluate(ctx, tree) {
     for await (let token of tree) {
         try {
             switch (token.type) {
             // Assembly flow control
             case "IncludeDirective":
                 Object.assign(token, {
-                    path: evaluate(ctx, token.path),
-                    transform: evaluate(ctx, token.transform)
+                    path: evaluate_statement(ctx, token.path),
+                    transform: evaluate_statement(ctx, token.transform)
                 });
                 break ;
             case "AlignDirective":
             case "RadixDirective":
                 Object.assign(token, {
-                    value: evaluate(ctx, token.value)
+                    value: evaluate_statement(ctx, token.value)
                 });
                 break ;
             case "EndDirective":
@@ -284,26 +224,26 @@ async function* evaluate_pass(ctx, tree) {
             case "ExternDirective":
             case "UndefineDirective":
                 Object.assign(token, {
-                    names: evaluate(ctx, token.names, false)
+                    names: evaluate_statement(ctx, token.names, false)
                 });
                 break ;
             case "SetDirective":
             case "EquateDirective":
             case "DefineDirective":
                 Object.assign(token, {
-                    name: evaluate(ctx, token.name, false),
-                    value: evaluate(ctx, token.value)
+                    name: evaluate_statement(ctx, token.name, false),
+                    value: evaluate_statement(ctx, token.value)
                 });
                 break ;
             case "LabelDirective":
                 Object.assign(token, {
-                    name: evaluate(ctx, token.name, false)
+                    name: evaluate_statement(ctx, token.name, false)
                 });
                 break ;
             case "IfDirective":
                 token.conditions.forEach((clause) => {
                     Object.assign(clause, {
-                        test: evaluate(ctx, clause.test)
+                        test: evaluate_statement(ctx, clause.test)
                     });
                 });
                 break ;
@@ -313,7 +253,7 @@ async function* evaluate_pass(ctx, tree) {
             case "WarningDirective":
             case "FailureDirective":
                 Object.assign(token, {
-                    message: evaluate(ctx, token.message)
+                    message: evaluate_statement(ctx, token.message)
                 });
                 break ;
 
@@ -361,7 +301,7 @@ async function* evaluate_pass(ctx, tree) {
     }
 }
 
-async function* lazy_evaluate_pass(ctx, feed) {
+async function* lazy_evaluate(ctx, feed) {
     let blocks = [];
 
     // Run through entire scope before lazy evaluating tree
@@ -374,13 +314,10 @@ async function* lazy_evaluate_pass(ctx, feed) {
         blocks.push(block);
     }
 
-    yield* evaluate_pass(ctx, blocks);
+    yield* evaluate(ctx, blocks);
 }
 
 module.exports = {
-    isValueType, autoType,
-    asNumber, asString, asTruthy, asName,
-
-    evaluate_pass,
-    lazy_evaluate_pass
+    evaluate,
+    lazy_evaluate
 };

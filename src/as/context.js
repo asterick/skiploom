@@ -1,6 +1,7 @@
 const {
-    asNumber
-} = require("./passes/evaluate.js");
+    isValueType, autoType,
+    asNumber, asString, asTruthy, asName,
+} = require("./helper.js");
 
 const { uuid } = require("../util/uuid.js");
 
