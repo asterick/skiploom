@@ -277,7 +277,7 @@ async function* evaluate(ctx, tree) {
             case "MacroDefinitionDirective":
                 Object.assign(token, {
                     name: evaluate_statement(ctx, token.name, false),
-                    parameters: evaluate_statement(ctx, token.parameters)
+                    parameters: evaluate_statement(ctx, token.parameters, false)
                 });
                 break ;
             //case "PurgeMacrosDirective":
