@@ -78,7 +78,6 @@ function flatten_unary(ast, scope, guard) {
 
     // Return our result
     value = cast.op(value);
-    console.log(value);
 
     switch (typeof value) {
         case "object":
@@ -220,7 +219,18 @@ function flatten(ast, scope, propegate, guard) {
         return flatten_unary(ast, scope, guard);
     case "BinaryOperation":
         return flatten_binary(ast, scope, guard);
-    // case "TernaryOperation":
+     case "TernaryOperation":
+        {
+            const value = flatten(ast.test, scope, true, guard);
+            const onTrue = flatten(ast.onTrue, scope, true, guard);
+            const onFalse = flatten(ast.onFalse, scope, true, guard);
+
+            if (!isValueType(value)) {
+                return { ... ast, value };
+            }
+
+            return flatten(asTruthy(value) ? onTrue : onFalse, scope, true, guard);
+        }
 
     // Variables
     case "Identifier":
