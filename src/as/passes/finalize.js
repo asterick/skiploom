@@ -56,7 +56,7 @@ async function* finalize(scope, tree) {
 
         try {
             switch (token.type) {
-            // Failure cases
+            // Termination cases
             case "EndDirective":
                 // This terminates the assembler, so discard anything that comes after
                 // bubble up so it terminates through all scopes
@@ -96,8 +96,9 @@ async function* finalize(scope, tree) {
             case "DataWordsDirective":
                 yield* TypedDataBlock(token, asNumber, Uint8Array);
                 break ;
-            case "DataAllocateDirective":
 
+            // These are the unimplemented bits
+            case "DataAllocateDirective":
             case "DispatchDirective":
             case "SectionDirective":
             case "AlignDirective":

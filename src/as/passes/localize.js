@@ -250,6 +250,7 @@ async function* localize(scope, feed) {
             case "CharacterDupDirective":
             case "SequenceDupDirective":
             case "MacroDefinitionDirective":
+            case "DispatchDirective":
             case "PurgeMacrosDirective":
                 yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: localize) ${token.type}`);
                 continue ;

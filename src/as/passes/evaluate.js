@@ -263,21 +263,36 @@ async function* evaluate(ctx, tree) {
                     data: evaluate_statement(ctx, token.data)
                 });
                 break ;
-            //case "DataAllocateDirective":
+            case "DataAllocateDirective":
+                Object.assign(token, {
+                    size: evaluate_statement(ctx, token.size)
+                });
+                break ;
 
             // Macro Directives
             //case "CountDupDirective":
             //case "ListDupDirective":
             //case "CharacterDupDirective":
             //case "SequenceDupDirective":
-            //case "MacroDefinitionDirective":
+            case "MacroDefinitionDirective":
+                Object.assign(token, {
+                    name: evaluate_statement(ctx, token.name, false),
+                    parameters: evaluate_statement(ctx, token.parameters)
+                });
+                break ;
             //case "PurgeMacrosDirective":
 
-            //case "DispatchDirective":
+            case "DispatchDirective":
+                Object.assign(token, {
+                    call: evaluate_statement(ctx, token.call, false),
+                    parameters: evaluate_statement(ctx, token.parameters)
+                });
+                break ;
             //case "SectionDirective":
             //case "NameDirective":
             //case "DefineSectionDirective":
             default:
+                console.log(token);
                 throw new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: evaluate) ${token.type}`);
 
             }
