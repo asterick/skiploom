@@ -77,12 +77,10 @@ class AssemblerContext {
                 // Assembly flow control
                 case "IncludeDirective":
                     {
-                        console.log(token);
                         const context = scope.clone();
-                        const feed = this.include(context, asString(token.path), token.transform ? asString(token.transform) : undefined);
-                        console.log(asString(token.transform) || undefined);
+                        const feed = this.include(token.location, asString(token.path), token.transform ? asString(token.transform) : undefined);
 
-                        yield* this.process(context, feed);
+                        yield* this.process(context, feed, false);
                     }
                     break ;
                 case "EndDirective":
@@ -327,31 +325,40 @@ class AssemblerContext {
         }
     }
 
-    async* include (scope, target, loader_location = 'text.loader.js') {
+    async* include (location, target, module = 'text.loader.js') {
         // Import our source transform
-        const root = scope.parserSource.path ? path.dirname(scope.parserSource.path) : process.cwd();
-        const loader = require(await resolve(loader_location));
+        const root = location.path ? path.dirname(location.path) : process.cwd();
         const fn = await resolve(target, root);
+        let loader;
+
+        try {
+            loader = require(await resolve(module));
+        } catch(e) {
+            yield new Message(LEVEL_FAIL, null, "Cannot ");
+            return ;
+        }
 
         // Isolate our namespace
-        scope.parserSource = {
-            loader: loader_location,
-            includedFrom: scope.parserSource,
-            path: fn
+        const source_location = {
+            loader: module,
+            path: fn,
+            ... location
         };
 
+        // Tag all our outbound blocks as being from this process
         for await (let block of loader(fn)) {
             if (block instanceof Message) {
                 yield block;
                 continue ;
             }
 
-            block.location.parserSource = scope.parserSource
+            Object.assign(block.location, source_location);
+
             yield block;
         }
     }
 
-    async* process(scope, tree) {
+    async* process(scope, tree, warn = true) {
         // Run through the various passes
         tree = evaluate_pass(scope, tree);
         tree = this.localize_pass(scope, tree);
@@ -360,11 +367,15 @@ class AssemblerContext {
         // Pass through the results
         yield* tree;
 
+        // If context has not been scoped, we need to simply move on
+        if (!warn) return ;
+
         // We've finished up, now start complaining about floating values
         for (const name in scope.top) {
             if (!scope.top.hasOwnProperty(name)) {
                 continue ;
             }
+
 
             const variable = scope.get(name);
 
@@ -382,17 +393,17 @@ class AssemblerContext {
 
     async assemble(path, globals)
     {
-        const parserSource = { source: "defaults" };
-        const scope = new Context({ parserSource }, {
+        const scope = new Context({
             radix: {
                 export: false,
-                value: autoType(10)
+                value: { ... autoType(10) }
             },
             ... globals
         });
 
         // Load our file
-        const tree = this.include(scope, path);
+        const location = { source: "command-line" };
+        const tree = this.include(location, path);
 
         // Begin processing file
         for await (let block of this.process(scope, tree)) {

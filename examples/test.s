@@ -7,7 +7,7 @@
 
     ;EXTERN (CODE, SHORT) poopiedoop
     INCLUDE "./include.s"
-    INCLUDE "./include.s" USING "text.transform.js"
+    INCLUDE "./include.s" USING "text.loader.js"
 
     ;MSG 1
     ;WARN 2
