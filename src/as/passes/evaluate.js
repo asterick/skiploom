@@ -85,7 +85,7 @@ function flatten_binary(ast, ctx, guard) {
     }
 
     const cast = casting[ast.op];
-    let left = flatten(ast.left, ctx, cast.left == asName, guard);
+    let left = flatten(ast.left, ctx, cast.left != asName, guard);
     let right = flatten(ast.right, ctx, true, guard);
 
     // Left side can be an identifier

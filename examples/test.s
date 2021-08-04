@@ -1,13 +1,10 @@
     Z EQU 123
 
 TEST_M MACRO A, B, C, D
-    I\A SET 0
-    I\?B SET 0
-    I\%C SET 0
-    LD A, I\A
-    LD A, I\?B
-    LD A, I\%C
-    ASCII "D"
+    I\A SET 1
+    I\?B SET 2
+    I\%C SET 3
+    DB I\A, I\?B, I\%C
     ENDM
 
     TEST_M Z, Z, Z, Z

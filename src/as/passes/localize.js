@@ -28,6 +28,7 @@ async function prospect(scope, ast) {
  *   De-localize variables
  *   Perform Macros
  */
+
 async function* localize(scope, feed) {
     for await (let token of feed) {
         if (token instanceof Message) {
@@ -297,6 +298,7 @@ async function* localize(scope, feed) {
                     const ctx = scope.nest();
                     for (const [i, name] of macro.parameters.entries()) {
                         const variable = ctx.local(name);
+                        variable.location = macro.location;
                         variable.value = parameters[i];
                     }
 
@@ -305,12 +307,11 @@ async function* localize(scope, feed) {
                 }
                 continue ;
 
-
-            // TODO: Unimplemented tokens
             case "CountDupDirective":
             case "ListDupDirective":
             case "CharacterDupDirective":
             case "SequenceDupDirective":
+                // TODO: Unimplemented directives
                 throw new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: localize) ${token.type}`);
             }
 
