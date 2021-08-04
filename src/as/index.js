@@ -1,6 +1,5 @@
 const { expressionParser } = require("./parsers.js");
 const { Context } = require("./context.js");
-const { uuid } = require("../util/uuid.js");
 const { passes } = require("./passes/index.js")
 
 const {
@@ -66,9 +65,7 @@ async function* assemble({ files, define }) {
             // Emitted a log message
             if (block instanceof Message) {
                 console.log(block.toString());
-
                 if (block.level == LEVEL_FATAL) return ;
-
                 continue ;
             }
 

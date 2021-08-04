@@ -2,6 +2,7 @@ const {
     isValueType, asString, asTruthy, asName,
 } = require("../helper.js");
 
+const { uuid } = require("../../util/uuid.js");
 const { passes } = require("./index.js")
 
 const {
@@ -44,7 +45,8 @@ async function* localize(scope, feed) {
 
                     yield* passes.assemble(context, feed, false);
                 }
-                break ;
+                continue ;
+
             case "RadixDirective":
                 {
                     const variable = scope.global('radix');
@@ -58,19 +60,21 @@ async function* localize(scope, feed) {
                         location: token.location
                     });
                 }
-                break ;
+                continue ;
 
             // Variable Directives
             case "LocalDirective":
                 for (const name of token.names.map(asName)) {
                     scope.local(name).location = token.location;
                 }
-                break ;
+                continue ;
+
             case "GlobalDirective":
                 for (const name of token.names.map(asName)) {
                     scope.global(name).location = token.location;
                 }
-                break ;
+                continue ;
+
             case "ExternDirective":
                 for (const name of token.names.map(asName)) {
                     const variable = scope.global(name);
@@ -85,7 +89,7 @@ async function* localize(scope, feed) {
                         variable[attr] = token.attributes[attr];
                     }
                 }
-                break ;
+                continue ;
 
             case "SetDirective":
                 {
@@ -101,7 +105,7 @@ async function* localize(scope, feed) {
                         location: token.location
                     });
                 }
-                break ;
+                continue ;
 
             case "EquateDirective":
                 {
@@ -119,7 +123,7 @@ async function* localize(scope, feed) {
                         frozen: true
                     });
                 }
-                break ;
+                continue ;
 
             case "LabelDirective":
                 {
@@ -144,7 +148,7 @@ async function* localize(scope, feed) {
 
                     yield variable.value;
                 }
-                break ;
+                continue ;
 
             case "DefineDirective":
                 {
@@ -164,7 +168,7 @@ async function* localize(scope, feed) {
                         define: true
                     });
                 }
-                break ;
+                continue ;
 
             case "UndefineDirective":
                 {
@@ -180,7 +184,7 @@ async function* localize(scope, feed) {
                         variable.remove(name);
                     }
                 }
-                break ;
+                continue ;
 
             case "IfDirective":
                 {
@@ -238,7 +242,7 @@ async function* localize(scope, feed) {
                     }
                 }
 
-                break ;
+                continue ;
 
             // Macro Directives
             case "CountDupDirective":
@@ -248,12 +252,11 @@ async function* localize(scope, feed) {
             case "MacroDefinitionDirective":
             case "PurgeMacrosDirective":
                 yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: localize) ${token.type}`);
-                break
-
-            default:
-                // Forward to next phase
-                yield token;
+                continue ;
             }
+
+            // Forward to next phase
+            yield token;
         } catch(msg) {
             if (msg instanceof Message) {
                 yield msg;

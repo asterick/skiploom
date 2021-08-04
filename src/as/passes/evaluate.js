@@ -5,6 +5,8 @@ const {
 
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
 
+// TODO: FUNCTION CALLS
+
 /*
  * Expression evaluation
  */
@@ -252,6 +254,17 @@ async function* evaluate(ctx, tree) {
                 });
                 break ;
 
+            // Data section directives
+            case "AsciiBlockDirective":
+            case "TerminatedAsciiBlockDirective":
+            case "DataBytesDirective":
+            case "DataWordsDirective":
+                Object.assign(token, {
+                    data: evaluate_statement(ctx, token.data)
+                });
+                break ;
+            //case "DataAllocateDirective":
+
             // Macro Directives
             //case "CountDupDirective":
             //case "ListDupDirective":
@@ -263,13 +276,10 @@ async function* evaluate(ctx, tree) {
             //case "DispatchDirective":
             //case "SectionDirective":
             //case "NameDirective":
-            //case "AsciiBlockDirective":
-            //case "TerminatedAsciiBlockDirective":
-            //case "DataBytesDirective":
-            //case "DataWordsDirective":
-            //case "DataAllocateDirective":
             //case "DefineSectionDirective":
+            default:
                 throw new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: evaluate) ${token.type}`);
+
             }
 
             yield token;

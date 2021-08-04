@@ -1,3 +1,8 @@
+    ASCII "Hello World", some_label
+    ASCIZ "Hello World"
+    DB 1, 2, 3, 4, 5, 65536
+    DW 1, 2, 3, 4, 5, 256
+
     X EQU 10
     Y EQU 2
     ^Z\X\?Y SET -(3+4)
@@ -11,8 +16,7 @@
 
     ;MSG 1
     ;WARN 2
-    ;FAIL 3
-;some_label:
+some_label:
 
 ;TEST_M MACRO A, B, C, D
     ;LD A, I\A
@@ -30,7 +34,7 @@
     ;B SET #01
     ;B SET B + 2
 
-    IF 0
+    IF 1
         WARN "This does nothing"
     ELSE
         FAIL "This did something"
