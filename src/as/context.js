@@ -40,6 +40,10 @@ class Context {
         return this.top.hasOwnProperty(name);
     }
 
+    nearVariables() {
+        return Object.keys(this.top);
+    }
+
     global(name) {
         if (this.top[name]) {
             if (this.top[name] != this.globals[name]) {
@@ -47,7 +51,7 @@ class Context {
             }
         } else {
             // Create container for variable
-            this.globals[name] = { frozen: true };
+            this.globals[name] = { global: true, frozen: true };
         }
 
         return this.top[name];

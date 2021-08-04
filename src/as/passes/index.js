@@ -6,5 +6,6 @@ Object.assign(passes, {
     ... require("./include.js"),
     ... require("./evaluate.js"),
     ... require("./localize.js"),
+    ... require("./macro.js"),
     ... require("./finalize.js"),
 })

@@ -228,6 +228,11 @@ function flatten(ast, ctx, propegate, guard) {
             const variable = ctx.get(ast.name) || ctx.local(ast.name);
             variable.used = true;
 
+            // Do not resolve symbols outside scope
+            if (!variable.global || !ctx.isNear(ast.name)) {
+                //return ast;
+            }
+
             // Implied forward decl
             if (!variable.value) {
                 variable.frozen = true;
@@ -235,7 +240,7 @@ function flatten(ast, ctx, propegate, guard) {
             }
 
             // Bubble up name (deferred values are implicitly named)
-            return { name:ast.name, ... flatten(ctx.get(ast.name).value, ctx, propegate, guard.concat(ast.name)) };
+            return { name:ast.name, ... flatten(variable.value, ctx, propegate, guard.concat(ast.name)) };
         }
 
     default:
@@ -259,6 +264,11 @@ function evaluate_statement(ctx, tree, propegate = true) {
 
 async function* evaluate(ctx, tree) {
     for await (let token of tree) {
+        if (token instanceof Message) {
+            yield token;
+            continue ;
+        }
+
         try {
             switch (token.type) {
             // Assembly flow control
@@ -419,23 +429,6 @@ async function* evaluate(ctx, tree) {
     }
 }
 
-async function* lazy_evaluate(ctx, feed) {
-    let blocks = [];
-
-    // Run through entire scope before lazy evaluating tree
-    for await (let block of feed) {
-        if (block instanceof Message) {
-            yield block;
-            continue ;
-        }
-
-        blocks.push(block);
-    }
-
-    yield* evaluate(ctx, blocks);
-}
-
 module.exports = {
-    evaluate,
-    lazy_evaluate
+    evaluate
 };

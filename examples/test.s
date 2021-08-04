@@ -1,6 +1,6 @@
     Z EQU 123
 
-    IF @DEF("Z")
+    IF @DEF(Z)
         MSG "IT EXISTS (but might not have a value yet)"
     ENDIF
 

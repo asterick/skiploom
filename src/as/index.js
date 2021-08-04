@@ -69,7 +69,8 @@ async function* assemble({ files, define }) {
                 continue ;
             }
 
-            console.log(block)
+            // Eventually this should be passed off to the linker
+            console.log(block);
         }
     }
 }

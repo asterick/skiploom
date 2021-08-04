@@ -5,12 +5,30 @@ const {
     Message
 } = require ("../../util/logging.js");
 
-async function* assemble(scope, tree, warn = true) {
+async function* lazy(pass, ctx, feed) {
+    let blocks = [];
+
+    // Run through entire scope before lazy evaluating tree
+    for await (let block of feed) {
+        if (block instanceof Message) {
+            yield block;
+            continue ;
+        }
+
+        blocks.push(block);
+    }
+
+    yield* pass(ctx, blocks);
+}
+
+async function* assemble(ctx, tree, warn = true) {
     // Run through the various passes
-    tree = passes.evaluate(scope, tree);
-    tree = passes.localize(scope, tree);
-    tree = passes.lazy_evaluate(scope, tree);
-    tree = passes.finalize(scope, tree);
+    tree = passes.evaluate(ctx, tree);
+    tree = passes.localize(ctx, tree);
+    tree = lazy(passes.evaluate, ctx, tree);
+    tree = passes.localize(ctx, tree);          // This simply reruns against IF statements
+    tree = passes.macro(ctx, tree);
+    tree = passes.finalize(ctx, tree);
 
     // Pass through the results
     yield* tree;
@@ -19,12 +37,8 @@ async function* assemble(scope, tree, warn = true) {
     if (!warn) return ;
 
     // We've finished up, now start complaining about floating values
-    for (const name in scope.top) {
-        if (!scope.top.hasOwnProperty(name)) {
-            continue ;
-        }
-
-        const variable = scope.get(name);
+    for (const name of ctx.nearVariables()) {
+        const variable = ctx.get(name);
 
         if (!variable.used) {
             if (!variable.value) {
