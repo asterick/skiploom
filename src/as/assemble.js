@@ -57,7 +57,7 @@ function lookup_indirect_offset(param, left, right) {
             case "IX": return [ Arguments.MEM_IX_DISP, right ];
             case "IY": return [ Arguments.MEM_IY_DISP, right ];
             default:
-                throw `Cannot index register ${left.register}`;
+                throw new Message(LEVEL_FAIL, left.location, `Invalid index register ${left.register}`);
         }
     }
 }
@@ -70,7 +70,7 @@ function lookup_indirect(param) {
         case "IX": return [ Arguments.MEM_IX, null ];
         case "IY": return [ Arguments.MEM_IY, null ];
         default:
-            throw `Cannot access memory with register ${param.register}`;
+            throw new Message(LEVEL_FAIL, param.location, `Cannot access memory with register ${param.register}`);
         }
 
     case "BinaryOperation":
@@ -113,7 +113,7 @@ function lookup_param(op_name, param) {
         case "ALL": return [ Arguments.REG_ALL, null ];
         case "ALE": return [ Arguments.REG_ALE, null ];
         default:
-            throw `Cannot match register ${param.register}`;
+            throw new Message(LEVEL_FAIL, param.location, `Cannot match register ${param.register}`);
         }
     case "Condition":
         switch (param.condition) {
@@ -138,7 +138,7 @@ function lookup_param(op_name, param) {
             case "NF2": return [ Arguments.NOT_SPECIAL_FLAG_2, null ];
             case "NF3": return [ Arguments.NOT_SPECIAL_FLAG_3, null ];
             default:
-                throw `Cannot match condition ${param.condition}`;
+                throw new Message(LEVEL_FAIL, param.location, `Cannot match condition ${param.condition}`);
         }
     }
 
@@ -152,7 +152,7 @@ function* assemble(token) {
     const table = Instructions[op_name];
 
     if (!table) {
-        throw `Unknown instruction name ${op_name}`;
+        throw new Message(LEVEL_FAIL, token.location, `Illegal instruction ${op_name}`);
     }
 
     if (parameters) {
@@ -175,7 +175,7 @@ function* assemble(token) {
         // Determine if instruction is legal
         const op = table[lookup(... key)]
         if (!op) {
-            throw `Illegal instruction`;
+            throw new Message(LEVEL_FAIL, token.location, `Illegal instruction`);
         }
 
         // Emit our opcode
