@@ -6,20 +6,10 @@ const {
 const { lookup, Arguments, Instructions } = require("../util/table.js");
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../util/logging.js");
 
-function as(type, v) {
-    const array = new type([v]);
-
-    if (v != array[0]) {
-        throw `${v} is too large of a constant`
-    }
-
-    return array;
-}
-
 function lookup_indirect_register(op_name, register, offset) {
     if (register.type == "Register" && register.register == "BR") {
         if (offset.type == "Number") {
-            return [ Arguments.MEM_BR, offset.value ];
+            return [ Arguments.MEM_BR, offset ];
         } else {
             // TODO: Lazy evaluate
             return null
@@ -30,11 +20,6 @@ function lookup_indirect_register(op_name, register, offset) {
 }
 
 function lookup_indirect_offset(param, op, left, right) {
-    if (left.type != "Register") {
-        // TODO: Deferred based absolute address
-        return null;
-    }
-
     if (right.type == "Register") {
         if (op != "Add") {
             throw `Invalid offset operation ${op}`;
@@ -51,17 +36,27 @@ function lookup_indirect_offset(param, op, left, right) {
                 throw `Cannot index register ${left.register}`;
         }
     } else {
-        if (op != "Add" && op != "Subtract") {
+        if (op == "Subtract") {
+            if (right.type == "Number") {
+                // Negate value simply
+                right = { ... right, value: -right.value };
+            } else {
+                // Negate value for deferred execution
+                right = {
+                    type: "UnaryOperator",
+                    op: "Negate",
+                    location: right.location,
+                    value: right
+                };
+            }
+        } else if (op != "Add") {
             throw `Invalid offset operation ${op}`;
-        } else if (right.type != "Number") {
-            // TODO: Deferred offset evaluation
-            return null;
         }
 
         switch (left.register) {
-            case "SP": return [ Arguments.MEM_SP_DISP, as(Int8Array, op == "Add" ? right.value : -right.value) ];
-            case "IX": return [ Arguments.MEM_IX_DISP, as(Int8Array, op == "Add" ? right.value : -right.value) ];
-            case "IY": return [ Arguments.MEM_IY_DISP, as(Int8Array, op == "Add" ? right.value : -right.value) ];
+            case "SP": return [ Arguments.MEM_SP_DISP, right ];
+            case "IX": return [ Arguments.MEM_IX_DISP, right ];
+            case "IY": return [ Arguments.MEM_IY_DISP, right ];
             default:
                 throw `Cannot index register ${left.register}`;
         }
@@ -70,8 +65,6 @@ function lookup_indirect_offset(param, op, left, right) {
 
 function lookup_indirect(op_name, param) {
     switch (param.type) {
-    case "BinaryOperation":
-        return lookup_indirect_offset(op_name, param.op, param.left, param.right);
     case "Register":
         switch(param.register) {
         case "HL": return [ Arguments.MEM_HL, null ];
@@ -80,11 +73,18 @@ function lookup_indirect(op_name, param) {
         default:
             throw `Cannot access memory with register ${param.register}`;
         }
+
+    case "BinaryOperation":
+        if (param.left.type == "Register") {
+            return lookup_indirect_offset(op_name, param.op, param.left, param.right);
+        }
+        // Fallthrough to an absolute address
+
     case "Number":
         if (op_name == "JP") {
-            return [ Arguments.MEM_VECTOR, as(Uint8Array, param.value) ];
+            return [ Arguments.MEM_VECTOR, param ];
         } else {
-            return [ Arguments.MEM_ABS, as(Uint16Array, param.value) ];
+            return [ Arguments.MEM_ABS, param ];
         }
     }
 
@@ -98,7 +98,7 @@ function lookup_param(op_name, param) {
     case "IndirectMemory":
         return lookup_indirect(op_name, param.address);
     case "Number":
-        return [ Arguments.IMM, param.value ];
+        return [ Arguments.IMM, param ];
     case "Register":
         switch (param.register) {
         case   "A": return [ Arguments.REG_A, null ];
@@ -188,19 +188,39 @@ function* assemble(token) {
 
         // Emit our opcode
         yield op.code.buffer;
-        for (let imm of imms) {
-            if (typeof imm == "number") {
-                switch (op.size) {
-                    case 8:
-                        imm = as(op.signed ? Int8Array : Uint8Array, imm);
+
+        for (let [idx, imm] of Object.entries(imms)) {
+            const type = op.immediates[idx];
+            let result;
+
+            if (imm.type == "Number") {
+                const value = asNumber(imm);
+
+                switch (type.size) {
+                    case 1:
+                        result = new (type.signed ? Int8Array : Uint8Array)([value]);
                         break ;
-                    case 16:
-                        imm = as(op.signed ? Int16Array : Uint16Array, imm);
+                    case 2:
+                        result = new (type.signed ? Int16Array : Uint16Array)([value]);
                         break ;
                 }
+
+                if (result[0] != value) {
+                    yield new Message(LEVEL_WARN, imm.location, `Value ${value} cannot fit inside ${type.signed ? "signed " : ""}${(type.size == 1) ? "byte" : "word"}`)
+                }
+
+                result = result.buffer;
+            } else {
+                result = {
+                    type: "RawValueDirective",
+                    value: imm,
+                    signed: type.signed,
+                    size: type.signed,
+                    location: imm.location
+                };
             }
 
-            yield imm.buffer;
+            yield result;
         }
     } else {
         yield table[0].code.buffer;

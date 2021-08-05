@@ -21,7 +21,7 @@ _main:
         LD      [02080H], L
         LD      [BR:020h], #0FFh
         LD      [HL], 0
-        LD      l,#0c0h
+        LD      l,#0100h
         LD      ep,#00h
         JRS NZ, 0
         RET
