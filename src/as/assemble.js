@@ -10,28 +10,28 @@ function lookup_indirect_register(register, offset) {
     if (register.type == "Register" && register.register == "BR") {
         return [ Arguments.MEM_BR, offset ];
     } else {
-        throw `Cannot perform indirect register offset access`;
+        throw new Message(LEVEL_FAIL, register.location, "Invalid access base");
     }
 }
 
-function lookup_indirect_offset(op, left, right) {
+function lookup_indirect_offset(param, left, right) {
     if (right.type == "Register") {
-        if (op != "Add") {
-            throw `Invalid offset operation ${op}`;
+        if (param.op != "Add") {
+            throw new Message(LEVEL_FAIL, param.location, `Invalid offset operation ${param.op}`);
         }
 
         if (right.register != "L") {
-            throw `Cannot offset index register ${right.register}`;
+            throw new Message(LEVEL_FAIL, left.location, `Invalid ofset register ${right.register}`);
         }
 
         switch (left.register) {
             case "IX": return [ Arguments.MEM_IX_OFF, null ];
             case "IY": return [ Arguments.MEM_IY_OFF, null ];
             default:
-                throw `Cannot index register ${left.register}`;
+                throw new Message(LEVEL_FAIL, left.location, `Invalid index register ${left.register}`);
         }
     } else {
-        if (op == "Subtract") {
+        if (param.op == "Subtract") {
             if (right.type == "Number") {
                 // Negate value simply
                 right = { ... right, value: -right.value };
@@ -44,8 +44,8 @@ function lookup_indirect_offset(op, left, right) {
                     value: right
                 };
             }
-        } else if (op != "Add") {
-            throw `Invalid offset operation ${op}`;
+        } else if (param.op != "Add") {
+            throw new Message(LEVEL_FAIL, param.location, `Invalid offset operation ${param.op}`);
         }
 
         switch (left.register) {
@@ -58,7 +58,7 @@ function lookup_indirect_offset(op, left, right) {
     }
 }
 
-function lookup_indirect(op_name, param) {
+function lookup_indirect(param) {
     switch (param.type) {
     case "Register":
         switch(param.register) {
@@ -71,11 +71,10 @@ function lookup_indirect(op_name, param) {
 
     case "BinaryOperation":
         if (param.left.type == "Register") {
-            return lookup_indirect_offset(param.op, param.left, param.right);
+            return lookup_indirect_offset(param, param.left, param.right);
         }
         // Fallthrough to an absolute address
-
-    case "Number":
+    default:
         return [ Arguments.MEM_ABS, param ];
     }
 
@@ -87,7 +86,7 @@ function lookup_param(op_name, param) {
     case "IndirectRegisterOffset":
         return lookup_indirect_register(param.register, param.offset);
     case "IndirectMemory":
-        return lookup_indirect(op_name, param.address);
+        return lookup_indirect(param.address);
     case "Number":
         return [ Arguments.IMM, param ];
     case "Register":
@@ -178,7 +177,7 @@ function* assemble(token) {
         }
 
         // Emit our opcode
-        yield op.code.buffer;
+        yield op.code;
 
         for (let [idx, imm] of Object.entries(imms)) {
             const type = op.immediates[idx];
@@ -205,8 +204,8 @@ function* assemble(token) {
                 result = {
                     type: "RawValueDirective",
                     value: imm,
+                    size: type.size,
                     signed: type.signed,
-                    size: type.signed,
                     location: imm.location
                 };
             }
@@ -214,7 +213,7 @@ function* assemble(token) {
             yield result;
         }
     } else {
-        yield table[0].code.buffer;
+        yield table[0].code;
     }
 }
 

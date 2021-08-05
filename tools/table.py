@@ -120,7 +120,7 @@ with open(os.path.join(os.path.dirname(__file__), 's1c88.csv'), 'r') as csvfile:
     for op, table in ops.items():
         print ("\t'%s': {" % op)
         for (index, entry) in table.items():
-            print ("\t\t[%i]: { code: new Uint8Array([%s]), size: %i, immediates: %s }," % (index, ', '.join(["0x%02x" % c for c in entry['code']]), entry['size'], dumps(entry['immediates'])))
+            print ("\t\t[%i]: { code: new Uint8Array([%s]).buffer, size: %i, immediates: %s }," % (index, ', '.join(["0x%02x" % c for c in entry['code']]), entry['size'], dumps(entry['immediates'])))
         print ("\t},")
     print ("};\n")
 

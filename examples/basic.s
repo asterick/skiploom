@@ -14,7 +14,7 @@ _main:
         SYMB    ALAB, _main, #257
 
         LD [1234h], A
-        JP [80h]
+        LD [SP+some_value], IX
         RET
 
         EXTERN  (CODE, SHORT) __START
