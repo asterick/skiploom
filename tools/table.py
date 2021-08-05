@@ -60,7 +60,7 @@ ARGUMENTS = {
     "[IX+dd]": ("MEM_IX_DISP", 1, True),
     "[IY+dd]": ("MEM_IY_DISP", 1, True),
     "[BR:ll]": ("MEM_BR", 1, False),
-    "[kk]": ("MEM_VECTOR", 1, False),
+    "[kk]": ("MEM_ABS", 1, False),
     "[hhll]": ("MEM_ABS", 2, False),
 
     "rr": ("IMM", 1, True),

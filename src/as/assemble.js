@@ -6,20 +6,15 @@ const {
 const { lookup, Arguments, Instructions } = require("../util/table.js");
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../util/logging.js");
 
-function lookup_indirect_register(op_name, register, offset) {
+function lookup_indirect_register(register, offset) {
     if (register.type == "Register" && register.register == "BR") {
-        if (offset.type == "Number") {
-            return [ Arguments.MEM_BR, offset ];
-        } else {
-            // TODO: Lazy evaluate
-            return null
-        }
+        return [ Arguments.MEM_BR, offset ];
     } else {
         throw `Cannot perform indirect register offset access`;
     }
 }
 
-function lookup_indirect_offset(param, op, left, right) {
+function lookup_indirect_offset(op, left, right) {
     if (right.type == "Register") {
         if (op != "Add") {
             throw `Invalid offset operation ${op}`;
@@ -76,16 +71,12 @@ function lookup_indirect(op_name, param) {
 
     case "BinaryOperation":
         if (param.left.type == "Register") {
-            return lookup_indirect_offset(op_name, param.op, param.left, param.right);
+            return lookup_indirect_offset(param.op, param.left, param.right);
         }
         // Fallthrough to an absolute address
 
     case "Number":
-        if (op_name == "JP") {
-            return [ Arguments.MEM_VECTOR, param ];
-        } else {
-            return [ Arguments.MEM_ABS, param ];
-        }
+        return [ Arguments.MEM_ABS, param ];
     }
 
     return null;
@@ -94,7 +85,7 @@ function lookup_indirect(op_name, param) {
 function lookup_param(op_name, param) {
     switch(param.type) {
     case "IndirectRegisterOffset":
-        return lookup_indirect_register(op_name, param.register, param.offset);
+        return lookup_indirect_register(param.register, param.offset);
     case "IndirectMemory":
         return lookup_indirect(op_name, param.address);
     case "Number":

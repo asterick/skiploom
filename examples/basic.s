@@ -12,18 +12,9 @@ $MODEL S
 _main:
         SYMB    TYPE, 257, 'X', 8, #16, 2, 0
         SYMB    ALAB, _main, #257
-        HALT
-        LD      HL, 0
-        PUSH    ALE
-        LD      [IX+L], A
-        LD      [IX+7Fh], A
-        LD      [SP-80h], IX
-        LD      [02080H], L
-        LD      [BR:020h], #0FFh
-        LD      [HL], 0
-        LD      l,#0100h
-        LD      ep,#00h
-        JRS NZ, 0
+
+        LD [1234h], A
+        JP [80h]
         RET
 
         EXTERN  (CODE, SHORT) __START
