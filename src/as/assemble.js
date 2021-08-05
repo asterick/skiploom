@@ -7,8 +7,12 @@ const { lookup, Arguments, Instructions } = require("../util/table.js");
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../util/logging.js");
 
 function lookup_indirect_register(register, offset) {
-    if (register.type == "Register" && register.register == "BR") {
-        return [ Arguments.MEM_BR, offset ];
+    if (register.type == "Register") {
+        if (register.register == "BR") {
+            return [ Arguments.MEM_BR, offset ];
+        } else {
+            throw new Message(LEVEL_FAIL, register.location, `Invalid access base register ${register.register}`);
+        }
     } else {
         throw new Message(LEVEL_FAIL, register.location, "Invalid access base");
     }
@@ -77,8 +81,6 @@ function lookup_indirect(param) {
     default:
         return [ Arguments.MEM_ABS, param ];
     }
-
-    return null;
 }
 
 function lookup_param(op_name, param) {
