@@ -11,10 +11,6 @@ const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require (".
 
 function flatten_function_call(ast, ctx, guard) {
     const calls = {
-        /* TODO: FUNCTION CALLS
-        "LOW":
-        "HIGH":
-        */
         "ARG": (v) => {
             const index = asNumber(v);
             if (!ctx.macro_parameters || index >= ctx.macro_parameters.length) {
@@ -24,8 +20,8 @@ function flatten_function_call(ast, ctx, guard) {
             return ctx.macro_parameters[index];
         },
         "ABS": (v) => Math.abs(asNumber(v)),
-        "AS88": () => "AS88 (node remake)",
-        "CADDR": (p, o) => (asNumber(o) & 0x7FFF) | ((asNumber(o) & 0x8000) ? ((asNumber(p) & 0xFF) << 15) : 0),
+        "AS88": () => "AS88 (node.js)",
+        //"CADDR":
         "COFF": (v) => (asNumber(v) & 0x7FFF),
         "CPAG": (v) => ((asNumber(v) >> 15) & 0xFF),
         "CAT": (a, b) => (asString(a)+asString(b)),
@@ -34,7 +30,9 @@ function flatten_function_call(ast, ctx, guard) {
         "DADDR": (p, o) => ((asNumber(o) & 0xFFFF) | ((asNumber(p) & 0xFF) << 16)),
         "DOFF": (v) => (asNumber(v) & 0xFFFF),
         "DPAG": (v) => ((asNumber(v) >> 16) & 0xFF),
+        //"HIGH":
         "LEN": (v) => asString(v).length,
+        //"LOW":
         "MAC": (n) => {
             const variable = ctx.get(asName(n));
             return (variable && variable.macro) || false;

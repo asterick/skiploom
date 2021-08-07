@@ -3,7 +3,7 @@ Assembler / Linker compatible with the assembly syntax of the Epson S1C88 toolch
 
 ## Things remaining
 * Allow for un-balanced definitions as the result of prospecting
-* Add @LOW and @HIGH to function calls (MODEL and LST will not be added)
+* Add @COFF, @LOW and @HIGH to function calls (MODEL and LST will not be added)
 * Final directives:
     * "DataAllocateDirective": This creates a number of uninitialized bytes
     * "DispatchDirective": Assembly instruction
