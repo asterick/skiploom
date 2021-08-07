@@ -1,6 +1,7 @@
 const { expressionParser } = require("./parsers.js");
 const { Context } = require("./context.js");
 const { passes } = require("./passes/index.js")
+const { generate } = require("../util/table.js");
 
 const {
     isValueType, autoType,
@@ -89,6 +90,9 @@ async function* assemble_file(path, globals)
 
 async function* assemble({ files, define }) {
     const globals = defines(... define);
+
+    // Make sure our instruction table is ready
+    await generate();
 
     for (let fn of files) {
         // Create a new variable scope (protect globals)
