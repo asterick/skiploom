@@ -218,8 +218,8 @@ shift_expr ->
 
 add_sub_expr ->
       mul_div_expr {% id %}
-    | add_sub_expr "+" mul_div_expr {% binary %}
-    | add_sub_expr "-" mul_div_expr {% binary %}
+    | mul_div_expr "+" add_sub_expr {% binary %}
+    | mul_div_expr "-" add_sub_expr {% binary %}
 
 mul_div_expr ->
       unary_expr {% id %}

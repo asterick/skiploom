@@ -17,3 +17,4 @@ Assembler / Linker compatible with the assembly syntax of the Epson S1C88 toolch
 ## Differences from AS88
 * @DEF and @MXP only take symbols, behavior may vary
 * labels are local by default
+* iteration counter for DUP* directives are symbols not labels

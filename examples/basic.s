@@ -13,7 +13,7 @@ _main:
         SYMB    TYPE, 257, 'X', 8, #16, 2, 0
         SYMB    ALAB, _main, #257
 
-        LD [1234h], A
+        LD [IX+1+2], A
         LD [SP+some_value], IX
         RET
 
