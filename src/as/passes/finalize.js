@@ -4,7 +4,6 @@ const {
 } = require("../helper.js");
 
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
-const { assemble } = require("../assemble.js");
 
 const encoder = new TextEncoder();
 
@@ -82,25 +81,6 @@ async function* finalize(scope, tree) {
                 if (token.message.every(isValueType)) {
                     yield new Message(LEVEL_FATAL, token.location, token.message.map(asString).join(''));
                 }
-                break ;
-
-            case "AsciiBlockDirective":
-                yield* TypedDataBlock(token, (v) => encoder.encode(asString(v)));
-                break ;
-            case "TerminatedAsciiBlockDirective":
-                yield* TypedDataBlock(token, (v) => encoder.encode(asString(v) + '\0'));
-                break ;
-            case "DataBytesDirective":
-                yield* TypedDataBlock(token, asNumber, Uint8Array);
-                break ;
-            case "DataWordsDirective":
-                yield* TypedDataBlock(token, asNumber, Uint16Array);
-                break ;
-
-            // These are the unimplemented bits
-            case "DispatchDirective":
-                // Validate that this instruction is resolved
-                yield* assemble(token);
                 break ;
 
             case "DataAllocateDirective":

@@ -1,10 +1,10 @@
 const {
     isValueType, isNumber, autoType,
     asNumber, asString, asTruthy, asName,
-} = require("./helper.js");
+} = require("../helper.js");
 
-const { lookup, Arguments, Instructions } = require("../util/table.js");
-const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../util/logging.js");
+const { lookup, Arguments, Instructions } = require("../../util/table.js");
+const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
 
 function lookup_indirect_register(register, offset) {
     if (register.type == "Register") {
@@ -219,6 +219,49 @@ function* assemble(token) {
     }
 }
 
+async function* instructions(ctx, tree) {
+    for await (let token of tree) {
+        if (token instanceof Message) {
+            yield token;
+            continue ;
+        }
+
+        try {
+            switch (token.type) {
+                case "AsciiBlockDirective":
+                    yield* TypedDataBlock(token, (v) => encoder.encode(asString(v)));
+                    break ;
+                case "TerminatedAsciiBlockDirective":
+                    yield* TypedDataBlock(token, (v) => encoder.encode(asString(v) + '\0'));
+                    break ;
+                case "DataBytesDirective":
+                    yield* TypedDataBlock(token, asNumber, Uint8Array);
+                    break ;
+                case "DataWordsDirective":
+                    yield* TypedDataBlock(token, asNumber, Uint16Array);
+                    break ;
+
+                // These are the unimplemented bits
+                case "DispatchDirective":
+                    // Validate that this instruction is resolved
+                    yield* assemble(token);
+                    break ;
+
+            default:
+                yield token;
+            }
+        } catch(msg) {
+            if (msg instanceof Message) {
+                yield msg;
+            } else if(msg instanceof Error) {
+                throw msg;
+            } else {
+                yield new Message(LEVEL_FAIL, token.location, msg);
+            }
+        }
+    }
+}
+
 module.exports = {
-    assemble
+    instructions
 }
