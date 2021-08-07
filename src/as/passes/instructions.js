@@ -76,8 +76,10 @@ function lookup_indirect(param) {
     case "BinaryOperation":
         if (param.left.type == "Register") {
             return lookup_indirect_offset(param, param.left, param.right);
+        } else {
+            return [ Arguments.MEM_ABS, param ];
         }
-        // Fallthrough to an absolute address
+
     default:
         return [ Arguments.MEM_ABS, param ];
     }
@@ -89,8 +91,6 @@ function lookup_param(op_name, param) {
         return lookup_indirect_register(param.register, param.offset);
     case "IndirectMemory":
         return lookup_indirect(param.address);
-    case "Number":
-        return [ Arguments.IMM, param ];
     case "Register":
         switch (param.name) {
         case   "A": return [ Arguments.REG_A, null ];
@@ -140,9 +140,9 @@ function lookup_param(op_name, param) {
             default:
                 throw new Message(LEVEL_FAIL, param.location, `Cannot match condition ${param.condition}`);
         }
+    default:
+        return [ Arguments.IMM, param ];
     }
-
-    return null;
 }
 
 function* assemble(token) {
@@ -159,15 +159,9 @@ function* assemble(token) {
         const key = [];
         const imms = []
 
-        // Validate the argument
+        // Create our key and immediate values
         for (let p of parameters) {
-            const output = lookup_param(op_name, p);
-            if (!output) {
-                yield token;
-                return ;
-            }
-
-            const [arg, data] = output;
+            const [arg, data] = lookup_param(op_name, p);
             key.push(arg);
             if (data !== null) imms.push(data);
         }
