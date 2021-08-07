@@ -39,6 +39,22 @@ function defines(... pairs) {
     }, {});
 }
 
+const RegisterNames = [
+    "ALL", "ALE",
+    "BR", "SC",
+    "NB", "CB","EP", "XP", "YP",
+    "A", "B", "H", "L",
+    "PC", "SP", "BA", "HL", "IX", "IY"
+];
+
+const ConditionNames = [
+    "LT", "LE", "GT", "GE",
+    "C", "Z", "V", "M",
+    "NC", "NZ", "NV", "P",
+    "F0", "F1", "F2", "F3",
+    "NF0", "NF1", "NF2", "NF3",
+];
+
 async function* assemble_file(path, globals)
 {
     // Setup our default context
@@ -49,6 +65,21 @@ async function* assemble_file(path, globals)
         },
         ... globals
     });
+
+    // These are our registers
+    for (const name of RegisterNames) {
+        const variable = scope.global(name);
+        variable.value = {
+            type: "Register", name
+        }
+    }
+
+    for (const name of ConditionNames) {
+        const variable = scope.global(name);
+        variable.value = {
+            type: "Condition", name
+        }
+    }
 
     // Load our file
     const location = { source: "command-line" };

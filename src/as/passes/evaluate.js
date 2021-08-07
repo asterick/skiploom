@@ -5,22 +5,6 @@ const {
 
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
 
-const RegisterNames = [
-    "ALL", "ALE",
-    "BR", "SC",
-    "NB", "CB","EP", "XP", "YP",
-    "A", "B", "H", "L",
-    "PC", "SP", "BA", "HL", "IX", "IY"
-];
-
-const ConditionNames = [
-    "LT", "LE", "GT", "GE",
-    "C", "Z", "V", "M",
-    "NC", "NZ", "NV", "P",
-    "F0", "F1", "F2", "F3",
-    "NF0", "NF1", "NF2", "NF3",
-];
-
 /*
  * Expression evaluation
  */
@@ -248,21 +232,6 @@ function flatten(ast, ctx, propegate, guard) {
             // We want the raw identifier
             if (!propegate) {
                 return ast;
-            }
-
-            // Reserved expression
-            if (RegisterNames.indexOf(ast.name.toUpperCase()) >= 0) {
-                return {
-                    type: "Register",
-                    register: ast.name.toUpperCase()
-                }
-            }
-
-            if (ConditionNames.indexOf(ast.name.toUpperCase()) >= 0) {
-                return {
-                    type: "Condition",
-                    condition: ast.name.toUpperCase()
-                }
             }
 
             // Detect circular reference

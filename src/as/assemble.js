@@ -8,10 +8,10 @@ const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require (".
 
 function lookup_indirect_register(register, offset) {
     if (register.type == "Register") {
-        if (register.register == "BR") {
+        if (register.name == "BR") {
             return [ Arguments.MEM_BR, offset ];
         } else {
-            throw new Message(LEVEL_FAIL, register.location, `Invalid access base register ${register.register}`);
+            throw new Message(LEVEL_FAIL, register.location, `Invalid access base register ${register.name}`);
         }
     } else {
         throw new Message(LEVEL_FAIL, register.location, "Invalid access base");
@@ -24,15 +24,15 @@ function lookup_indirect_offset(param, left, right) {
             throw new Message(LEVEL_FAIL, param.location, `Invalid offset operation ${param.op}`);
         }
 
-        if (right.register != "L") {
-            throw new Message(LEVEL_FAIL, left.location, `Invalid ofset register ${right.register}`);
+        if (right.name != "L") {
+            throw new Message(LEVEL_FAIL, left.location, `Invalid ofset register ${right.name}`);
         }
 
-        switch (left.register) {
+        switch (left.name) {
             case "IX": return [ Arguments.MEM_IX_OFF, null ];
             case "IY": return [ Arguments.MEM_IY_OFF, null ];
             default:
-                throw new Message(LEVEL_FAIL, left.location, `Invalid index register ${left.register}`);
+                throw new Message(LEVEL_FAIL, left.location, `Invalid index register ${left.name}`);
         }
     } else {
         if (param.op == "Subtract") {
@@ -52,12 +52,12 @@ function lookup_indirect_offset(param, left, right) {
             throw new Message(LEVEL_FAIL, param.location, `Invalid offset operation ${param.op}`);
         }
 
-        switch (left.register) {
+        switch (left.name) {
             case "SP": return [ Arguments.MEM_SP_DISP, right ];
             case "IX": return [ Arguments.MEM_IX_DISP, right ];
             case "IY": return [ Arguments.MEM_IY_DISP, right ];
             default:
-                throw new Message(LEVEL_FAIL, left.location, `Invalid index register ${left.register}`);
+                throw new Message(LEVEL_FAIL, left.location, `Invalid index register ${left.name}`);
         }
     }
 }
@@ -65,12 +65,12 @@ function lookup_indirect_offset(param, left, right) {
 function lookup_indirect(param) {
     switch (param.type) {
     case "Register":
-        switch(param.register) {
+        switch(param.name) {
         case "HL": return [ Arguments.MEM_HL, null ];
         case "IX": return [ Arguments.MEM_IX, null ];
         case "IY": return [ Arguments.MEM_IY, null ];
         default:
-            throw new Message(LEVEL_FAIL, param.location, `Cannot access memory with register ${param.register}`);
+            throw new Message(LEVEL_FAIL, param.location, `Cannot access memory with register ${param.name}`);
         }
 
     case "BinaryOperation":
@@ -92,7 +92,7 @@ function lookup_param(op_name, param) {
     case "Number":
         return [ Arguments.IMM, param ];
     case "Register":
-        switch (param.register) {
+        switch (param.name) {
         case   "A": return [ Arguments.REG_A, null ];
         case   "B": return [ Arguments.REG_B, null ];
         case   "L": return [ Arguments.REG_L, null ];
@@ -113,10 +113,10 @@ function lookup_param(op_name, param) {
         case "ALL": return [ Arguments.REG_ALL, null ];
         case "ALE": return [ Arguments.REG_ALE, null ];
         default:
-            throw new Message(LEVEL_FAIL, param.location, `Cannot match register ${param.register}`);
+            throw new Message(LEVEL_FAIL, param.location, `Cannot match register ${param.name}`);
         }
     case "Condition":
-        switch (param.condition) {
+        switch (param.name) {
             case  "LT": return [ Arguments.LESS_THAN, null ];
             case  "LE": return [ Arguments.LESS_EQUAL, null ];
             case  "GT": return [ Arguments.GREATER_THAN, null ];
