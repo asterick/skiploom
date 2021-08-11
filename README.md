@@ -13,6 +13,7 @@ Assembler / Linker compatible with the assembly syntax of the Epson S1C88 toolch
     * "DefineSectionDirective": defines properties of a section
     * "Fragment": used to define position of a label
  * Need to actually start resolving addresses of fragments
+ * Noticing conditions or registers in complex expressions should throw a failure
 
 ## Differences from AS88
 * @DEF and @MXP only take symbols, behavior may vary
