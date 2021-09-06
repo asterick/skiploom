@@ -90,7 +90,9 @@ async function* finalize(scope, tree) {
         }
     }
 
-    yield consolidate(merge);
+    if (merge.length > 0) {
+        yield consolidate(merge);
+    }
 }
 
 module.exports = {
