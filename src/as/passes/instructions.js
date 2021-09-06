@@ -87,6 +87,11 @@ function lookup_indirect(param) {
 
 function lookup_param(op_name, param) {
     switch(param.type) {
+    case "ImmediateValue":
+        return [ Arguments.IMM, param ];
+    default:
+        // NOTE: THIS IS A RELATIVE IMMEDIATE VALUE
+        return [ Arguments.IMM, param ];
     case "IndirectRegisterOffset":
         return lookup_indirect_register(param.register, param.offset);
     case "IndirectMemory":
@@ -140,8 +145,6 @@ function lookup_param(op_name, param) {
             default:
                 throw new Message(LEVEL_FAIL, param.location, `Cannot match condition ${param.condition}`);
         }
-    default:
-        return [ Arguments.IMM, param ];
     }
 }
 

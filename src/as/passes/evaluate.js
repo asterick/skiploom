@@ -21,8 +21,24 @@ function flatten_function_call(ast, ctx, guard) {
         },
         "ABS": (v) => Math.abs(asNumber(v)),
         "AS88": () => "AS88 (node.js)",
-        //"CADDR":
-        "COFF": (v) => (asNumber(v) & 0x7FFF),
+        "CADDR": (a, b) => {
+            b = asNumber(b);
+
+            if (b > 0x8000) {
+                return (asNumber(a) << 15) | (b & 0x7FFF);
+            } else {
+                return b;
+            }
+        },
+        "COFF": (v) => {
+            v = asNumber(v);
+
+            if (v > 0x7FFF) {
+                return (v & 0x7FFF) | 0x8000;
+            } else {
+                return v;
+            }
+        },
         "CPAG": (v) => ((asNumber(v) >> 15) & 0xFF),
         "CAT": (a, b) => (asString(a)+asString(b)),
         "CNT": () => (ctx.macro_parameters ? ctx.macro_parameters.length : 0),
@@ -30,9 +46,9 @@ function flatten_function_call(ast, ctx, guard) {
         "DADDR": (p, o) => ((asNumber(o) & 0xFFFF) | ((asNumber(p) & 0xFF) << 16)),
         "DOFF": (v) => (asNumber(v) & 0xFFFF),
         "DPAG": (v) => ((asNumber(v) >> 16) & 0xFF),
-        //"HIGH":
-        "LEN": (v) => asString(v).length,
-        //"LOW":
+        "HIGH": (v) => ((asNumber(v) >> 8) & 0xFF),
+        "LEN": (v) => (asString(v).length),
+        "LOW": (v) => (asNumber(v) & 0xFF),
         "MAC": (n) => {
             const variable = ctx.get(asName(n));
             return (variable && variable.macro) || false;
@@ -183,6 +199,12 @@ function flatten(ast, ctx, propegate, guard) {
     case "Fragment":
     case "String":
         return ast;
+
+    case "ImmediateValue":
+        return {
+            ... ast,
+            value: flatten(ast.value, ctx, propegate, guard)
+        };
 
     case "IndirectMemory":
         return {

@@ -168,8 +168,6 @@ async function generate() {
         if (ce_code) format(new Uint8Array([0xCE, byte]).buffer, ce_code, ce_arg1, ce_arg2);
         if (cf_code) format(new Uint8Array([0xCF, byte]).buffer, cf_code, cf_arg1, cf_arg2);
     }
-
-    console.log(Instructions);
 }
 
 function lookup(arg1 = 0, arg2 = 0) {
