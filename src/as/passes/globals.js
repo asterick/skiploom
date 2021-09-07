@@ -20,7 +20,7 @@ async function* globals(scope, feed) {
 
         try {
             switch (token.type) {
-            // Variable Directives
+            // Global Directives
             case "GlobalDirective":
                 for (const name of token.names.map(asName)) {
                     scope.global(name).location = token.location;
@@ -40,6 +40,10 @@ async function* globals(scope, feed) {
                         variable[attr] = token.attributes[attr];
                     }
                 }
+                continue ;
+
+            case "DefineSectionDirective":
+                yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: globals) ${token.type}`);
                 continue ;
 
             default:

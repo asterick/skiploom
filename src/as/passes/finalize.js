@@ -70,12 +70,13 @@ async function* finalize(scope, tree) {
             case "DataAllocateDirective":
             case "SectionDirective":
             case "AlignDirective":
-            case "NameDirective":
-            case "DefineSectionDirective":
             case "Fragment":
                 yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: finalize) ${token.type}`);
                 break ;
 
+            case "NameDirective":
+                // This is discarded, as it is not useful to me
+                break ;
             default:
                 yield token;
             }

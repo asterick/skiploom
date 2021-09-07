@@ -71,27 +71,6 @@ async function* localize(scope, feed) {
                 }
                 continue ;
 
-            case "GlobalDirective":
-                for (const name of token.names.map(asName)) {
-                    scope.global(name).location = token.location;
-                }
-                continue ;
-
-            case "ExternDirective":
-                for (const name of token.names.map(asName)) {
-                    const variable = scope.global(name);
-                    variable.location = token.locaiton;
-
-                    for (const attr in token.attributes) {
-                        if (variable[attr] && variable[attr] != token.attributes[attr]) {
-                            throw new Message(LEVEL_FAIL, token.location, `Variable ${name} already defines ${attr} property as ${variable[attr]}`)
-                        }
-
-                        variable[attr] = token.attributes[attr];
-                    }
-                }
-                continue ;
-
             case "SetDirective":
                 {
                     const name = asName(token.name);
@@ -113,7 +92,7 @@ async function* localize(scope, feed) {
                     const name = asName(token.name);
                     const variable = scope.get(name) || scope.global(name);
 
-                    if (variable.value && variable.value) {
+                    if (variable.frozen && variable.value) {
                         throw new Message(LEVEL_FAIL, token.location, `Cannot change frozen value ${name}`);
                     }
 

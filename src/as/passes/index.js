@@ -9,4 +9,5 @@ Object.assign(passes, {
     ... require("./localize.js"),
     ... require("./macro.js"),
     ... require("./finalize.js"),
+    ... require("./globals.js")
 })

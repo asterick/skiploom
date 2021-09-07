@@ -23,6 +23,10 @@ async function* lazy(feed) {
 }
 
 async function* assemble(ctx, tree, warn = true) {
+    // Locate definitions pass
+    tree = passes.globals(ctx, tree);
+    tree = lazy(tree);
+
     // First pass
     tree = passes.evaluate(ctx, tree);
     tree = passes.localize(ctx, tree);
