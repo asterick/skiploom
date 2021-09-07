@@ -152,11 +152,11 @@ section_attr ->
     | "FIT" expression {% ([,fit]) => ({ fit }) %}
     | "OVERLAY" {% () => ({ target: "overlay" }) %}
     | "ROMDATA" {% () => ({ target: "romdata" }) %}
-    | "NOCLEAR" {% () => ({ target: "noclear" }) %}
-    | "CLEAR" {% () => ({ target: "clear" }) %}
-    | "INIT" {% () => ({ target: "init" }) %}
     | "MAX" {% () => ({ target: "max" }) %}
     | "JOIN" {% () => ({ join: true }) %}
+    | "NOCLEAR" {% () => ({ initialize: "noclear" }) %}
+    | "CLEAR" {% () => ({ initialize: "clear" }) %}
+    | "INIT" {% () => ({ initialize: "copy" }) %}
 
 # Lists
 extern_attr_list ->

@@ -7,21 +7,6 @@ const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require (".
 
 const encoder = new TextEncoder();
 
-function consolidate(cells) {
-    // Generate a
-    const len = cells.reduce((acc, data) => (acc + data.byteLength), 0);
-    const arr = new Uint8Array(len);
-
-    let index = 0;
-    do {
-        const slice = cells.shift();
-        arr.set(new Uint8Array(slice), index)
-        index += slice.byteLength;
-    } while (cells.length);
-
-    return arr.buffer;
-}
-
 async function* finalize(scope, tree) {
     const merge = [];
 
@@ -32,10 +17,8 @@ async function* finalize(scope, tree) {
         }
 
         if (token instanceof ArrayBuffer) {
-            merge.push(token);
+            yield token;
             continue ;
-        } else if (merge.length > 0) {
-            yield consolidate(merge);
         }
 
         try {
@@ -89,10 +72,6 @@ async function* finalize(scope, tree) {
                 yield new Message(LEVEL_FATAL, token.location, msg);
             }
         }
-    }
-
-    if (merge.length > 0) {
-        yield consolidate(merge);
     }
 }
 
