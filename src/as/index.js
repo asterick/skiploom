@@ -69,14 +69,24 @@ async function* assemble_file(path, globals)
 
     // These are our registers
     for (const name of RegisterNames) {
-        const variable = scope.global(name);
+        let variable = scope.global(name);
+        variable.value = {
+            type: "Register", name
+        }
+
+        variable = scope.global(name.toLowerCase());
         variable.value = {
             type: "Register", name
         }
     }
 
     for (const name of ConditionNames) {
-        const variable = scope.global(name);
+        let variable = scope.global(name);
+        variable.value = {
+            type: "Condition", name
+        }
+
+        variable = scope.global(name.toLowerCase());
         variable.value = {
             type: "Condition", name
         }

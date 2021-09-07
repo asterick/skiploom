@@ -47,9 +47,8 @@ const keywords = {
 
 // Our lexer
 const lexer = moo.compile({
-    ws: { match: /[ \t\f\v]+/ },
+    ws: { match: /(?:[ \t\f\v]|\\\r\n?|\\\n\r?)+/ },
     linefeed: { match:  /\r\n?|\n\r?/, lineBreaks: true },
-    continuation: { match: /\\\r\n?|\\\n\r?/, lineBreaks: true },
     comment: { match:/;(?:[^\n\r\\]|\\(?:\n?\r?|\r?\n?))*/, lineBreaks: true },
     string: [
         { match: /"(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r"])*"/, value: (s) => escape(s.slice(1,-1)) },
