@@ -60,11 +60,14 @@ async function* assemble_file(path, globals)
 {
     // Setup our default context
     const scope = new Context({
-        radix: {
-            export: false,
-            value: { ... autoType(10) }
-        },
-        ... globals
+        globals: {
+            ... globals,
+
+            radix: {
+                export: false,
+                value: { ... autoType(10) }
+            }
+        }
     });
 
     // These are our registers
@@ -113,10 +116,9 @@ async function* assemble({ files, define }) {
                 if (block.level == LEVEL_FATAL) return ;
                 continue ;
             }
-
-            // Eventually this should be passed off to the linker
-            //console.log(block);
         }
+
+        // Emit sections + definitions here
     }
 }
 
