@@ -1,5 +1,5 @@
-# pokemon-toolchain
-Assembler / Linker compatible with the assembly syntax of the Epson S1C88 toolchain
+# S1C88 Toolchain
+Assembler / Linker compatible with the assembly syntax of the Epson S1C88 toolchain, targeting the pokemon mini
 
 ## Things remaining
 * Final directives:
