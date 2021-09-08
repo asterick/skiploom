@@ -4,7 +4,7 @@
   "description": "Assembler / Linker compatible with the assembly syntax of the Epson S1C88 toolchain",
   "main": "src/pmt.cli.js",
   "scripts": {
-    "postinstall": "echo npx nearleyc --out src/as/grammar.js src/as/grammar.ne",
+    "postinstall": "npx nearleyc --out src/as/grammar.js src/as/grammar.ne",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
