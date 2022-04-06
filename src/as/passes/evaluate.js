@@ -41,6 +41,7 @@ function flatten_function_call(ast, ctx, guard) {
         },
         "CPAG": (v) => ((asNumber(v) >> 15) & 0xFF),
         "CAT": (a, b) => (asString(a)+asString(b)),
+        "CHR": (v) => String.fromCharCode(asNumber(v)),
         "CNT": () => (ctx.macro_parameters ? ctx.macro_parameters.length : 0),
         "DEF": (n) => (ctx.get(asName(n)) !== undefined),
         "DADDR": (p, o) => ((asNumber(o) & 0xFFFF) | ((asNumber(p) & 0xFF) << 16)),
@@ -66,7 +67,7 @@ function flatten_function_call(ast, ctx, guard) {
     };
 
     if (!calls[ast.name]) {
-        throw "Unknown function name ${ast.name}";
+        throw `Unknown function name ${ast.name}`;
     }
 
     // Calculate parameters and abort if not final
@@ -457,6 +458,15 @@ async function* evaluate(ctx, tree) {
                     ... token,
                     name: evaluate_statement(ctx, token.name, false),
                     at: evaluate_statement(ctx, token.at)
+                };
+                break ;
+
+            case "JumpDirective":
+            case "CallDirective":
+                yield {
+                    ... token,
+                    name: evaluate_statement(ctx, token.name, false),
+                    condition: evaluate_statement(ctx, token.condition)
                 };
                 break ;
 

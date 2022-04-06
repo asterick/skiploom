@@ -116,6 +116,8 @@ async function* assemble({ files, define }) {
                 if (block.level == LEVEL_FATAL) return ;
                 continue ;
             }
+
+            yield block;
         }
 
         // Emit sections + definitions here

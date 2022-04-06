@@ -36,6 +36,7 @@ async function* assemble(ctx, tree, warn = true) {
     tree = passes.evaluate(ctx, tree);
     tree = passes.localize(ctx, tree);
     tree = passes.macro(ctx, tree);
+    tree = passes.advanced_jump(ctx, tree);
     tree = passes.instructions(ctx, tree);
     tree = passes.finalize(ctx, tree);
 
