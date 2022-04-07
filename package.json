@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/asterick/s1c88-toolchain.git"
+    "url": "git+https://github.com/asterick/skiploom.git"
   },
   "keywords": [
     "s1c88",
@@ -23,9 +23,9 @@
     "skip": "bin/skip"
   },
   "bugs": {
-    "url": "https://github.com/asterick/s1c88-toolchain/issues"
+    "url": "https://github.com/asterick/skiploom/issues"
   },
-  "homepage": "https://github.com/asterick/s1c88-toolchain#readme",
+  "homepage": "https://github.com/asterick/skiploom#readme",
   "dependencies": {
     "argparse": "^2.0.1",
     "moo": "^0.5.1",
