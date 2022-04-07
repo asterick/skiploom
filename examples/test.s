@@ -32,4 +32,4 @@ TEST_M MACRO A1, A2, A3, D
     ENDM
 
     TEST_M TMP, TMP, TMP, 1, 2, 3
-    ; PMACRO TEST_M
+    PMACRO TEST_M
