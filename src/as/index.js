@@ -128,7 +128,8 @@ async function* assemble({ files, define }) {
                 continue ;
             }
 
-            yield block;
+            console.dir(block);
+            //yield block;
         }
 
         // Emit sections + definitions here

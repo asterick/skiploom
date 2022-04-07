@@ -1,8 +1,8 @@
 {
-  "name": "s1c88-toolchain",
+  "name": "skiploom",
   "version": "1.0.0",
   "description": "Assembler / Linker compatible with the assembly syntax of the Epson S1C88 toolchain",
-  "main": "src/pmt.cli.js",
+  "main": "src/skip.cli.js",
   "scripts": {
     "postinstall": "npx nearleyc --out src/as/grammar.js src/as/grammar.ne",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -20,7 +20,7 @@
   "author": "Bryon Vandiver",
   "license": "Apache-2.0",
   "bin": {
-    "pmt": "bin/pmt"
+    "skip": "bin/skip"
   },
   "bugs": {
     "url": "https://github.com/asterick/s1c88-toolchain/issues"
