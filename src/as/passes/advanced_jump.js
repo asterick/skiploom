@@ -7,10 +7,10 @@ const { lookup, Arguments, Instructions } = require("../../util/table.js");
 const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require ("../../util/logging.js");
 
 const JUMP_TYPES = {
-    'JRS': 'JumpDirective',
-    'JRL': 'JumpDirective',
-    'CARS': 'CallDirective',
-    'CARL': 'CallDirective'
+    'JRS': { type: 'JumpDirective', size: "Short" },
+    'JRL': { type: 'JumpDirective', size: "Long" },
+    'CARS': { type: 'CallDirective', size: "Short" },
+    'CARL': { type: 'CallDirective', size: "Long" },
 };
 
 async function* advanced_jump(ctx, tree) {

@@ -26,6 +26,13 @@ async function* include (location, target, module = 'text.loader.js') {
         parent: location
     };
 
+    // Output a dependancy marker for the include
+    yield {
+        type: "Dependancy",
+        source: "include",
+        filename: fn
+    }
+
     // Tag all our outbound blocks as being from this process
     for await (let block of loader(fn)) {
         if (block instanceof Message) {

@@ -108,6 +108,12 @@ async function* assemble({ files, define }) {
     await generate();
 
     for (let fn of files) {
+        // This object file contains this dependancy
+        yield {
+            type: "Dependancy",
+            filename: fn
+        }
+
         // Create a new variable scope (protect globals)
         for await (block of assemble_file(fn, globals)) {
             // Emitted a log message

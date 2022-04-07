@@ -5,19 +5,19 @@
     ENDIF
 
     loop DUP 5
-    WARN "Just some warnings for ya: ", loop
+    ;WARN "Just some warnings for ya: ", loop
     ENDM
 
     loop DUPA counter, 1, 2, 3, 4, 5
-    WARN "Just some warnings for ya: ", loop, " ", counter
+    ;WARN "Just some warnings for ya: ", loop, " ", counter
     ENDM
 
     loop DUPC counter, "Hello World"
-    WARN "Just some warnings for ya: ", loop, " ", counter
+    ;WARN "Just some warnings for ya: ", loop, " ", counter
     ENDM
 
     loop DUPF counter, 25, 0, -5
-    WARN "Just some warnings for ya: ", loop, " ", counter
+    ;WARN "Just some warnings for ya: ", loop, " ", counter
     ENDM
 
 TEST_M MACRO A, B, C, D
