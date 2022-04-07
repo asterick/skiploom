@@ -1,6 +1,6 @@
-    Z EQU 123
+    TMP EQU 123
 
-    IF @DEF(Z)
+    IF @DEF(TMP)
         MSG "IT EXISTS (but might not have a value yet)"
     ENDIF
 
@@ -31,5 +31,5 @@ TEST_M MACRO A, B, C, D
         ENDM
     ENDM
 
-    TEST_M Z, Z, Z, 1, 2, 3
+    TEST_M TMP, TMP, TMP, 1, 2, 3
     PMACRO TEST_M

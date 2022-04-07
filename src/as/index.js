@@ -75,24 +75,29 @@ async function* assemble_file(path, globals)
         let variable = scope.global(name);
         variable.value = {
             type: "Register", name
-        }
+        };
+        variable.reserved = true;
 
         variable = scope.global(name.toLowerCase());
         variable.value = {
             type: "Register", name
-        }
+        };
+        variable.reserved = true;
     }
 
     for (const name of ConditionNames) {
         let variable = scope.global(name);
         variable.value = {
             type: "Condition", name
-        }
+        };
+        variable.reserved = true;
+
 
         variable = scope.global(name.toLowerCase());
         variable.value = {
             type: "Condition", name
-        }
+        };
+        variable.reserved = true;
     }
 
     // Load our file

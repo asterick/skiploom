@@ -77,7 +77,7 @@ async function* localize(scope, feed) {
                     const variable = scope.get(name) || scope.local(name);
 
                     if (variable.frozen && variable.value) {
-                        throw new Message(LEVEL_FAIL, token.location, `Cannot set frozen value ${name}`)
+                        throw new Message(LEVEL_FAIL, token.location, `Cannot change frozen value ${name}${variable.reserved ? " (reserved word)" : ''}`)
                     }
 
                     Object.assign(variable, {
@@ -93,7 +93,7 @@ async function* localize(scope, feed) {
                     const variable = scope.get(name) || scope.global(name);
 
                     if (variable.frozen && variable.value) {
-                        throw new Message(LEVEL_FAIL, token.location, `Cannot change frozen value ${name}`);
+                        throw new Message(LEVEL_FAIL, token.location, `Cannot change frozen value ${name}${variable.reserved ? " (reserved word)" : ''}`);
                     }
 
                     // Assign our value
