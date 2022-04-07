@@ -50,15 +50,15 @@ async function* advanced_jump(ctx, tree) {
                 }
 
                 let condition = null,
-                    name;
+                target;
 
                if (token.parameters.length == 2 &&
                     token.parameters[0].type == 'Condition' &&
                     (token.parameters[1].type == 'Identifier' || token.parameters[1].type == 'Fragment')) {
-                    [ condition, name ] = token.parameters;
+                    [ condition, target ] = token.parameters;
                 } else if (token.parameters.length == 1 &&
                     (token.parameters[0].type == 'Identifier' || token.parameters[0].type == 'Fragment')) {
-                    [ name ] = token.parameters;
+                    [ target ] = token.parameters;
                 } else {
                     // This is a format we do not abide
                     yield token;
@@ -67,9 +67,10 @@ async function* advanced_jump(ctx, tree) {
 
                 // Emit a naked jump/call for the linker
                 yield {
-                    type: JUMP_TYPES[token.call.name],
                     location: token.location,
-                    name, condition
+                    ... JUMP_TYPES[token.call.name],
+                    location: token.location,
+                    target, condition
                 };
                 break ;
 

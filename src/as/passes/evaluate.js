@@ -465,7 +465,7 @@ async function* evaluate(ctx, tree) {
             case "CallDirective":
                 yield {
                     ... token,
-                    name: evaluate_statement(ctx, token.name, false),
+                    target: evaluate_statement(ctx, token.target, false),
                     condition: evaluate_statement(ctx, token.condition)
                 };
                 break ;
