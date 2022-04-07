@@ -20,11 +20,11 @@
     ;WARN "Just some warnings for ya: ", loop, " ", counter
     ENDM
 
-TEST_M MACRO A, B, C, D
-    I\A SET 1
-    I\?B SET 2
-    I\%C SET 3
-    DB I\A, I\?B, I\%C
+TEST_M MACRO A1, A2, A3, D
+    I\A1 SET 1
+    I\?A2 SET 2
+    I\%A3 SET 3
+    DB I\A1, I\?A2, I\%A3
     DW 1,2,3
         DUPF count, 3, @CNT() - 1
             MSG "Argument: ", count, " ", @ARG(count)
@@ -32,4 +32,4 @@ TEST_M MACRO A, B, C, D
     ENDM
 
     TEST_M TMP, TMP, TMP, 1, 2, 3
-    PMACRO TEST_M
+    ; PMACRO TEST_M
