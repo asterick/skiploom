@@ -4,7 +4,8 @@
   "description": "Assembler / Linker compatible with the assembly syntax of the Epson S1C88 toolchain",
   "main": "src/skip.cli.js",
   "scripts": {
-    "postinstall": "npx nearleyc --out src/as/grammar.js src/as/grammar.ne",
+    "nearly": "npx nearleyc --out src/as/grammar.js src/as/grammar.ne; npx nearleyc --out src/link/grammar.js src/link/grammar.ne",
+    "prepare": "npm run nearly",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
