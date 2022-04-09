@@ -7,20 +7,28 @@ const {
 } = require ("../../util/logging.js");
 
 async function* include (location, target, module = 'text.loader.js') {
-    // Import our source transform
-    const fn = await resolve(target, location.path && path.dirname(location.path));
-    let loader, args;
+    const querystring = module.indexOf("?");
+    let args = null;
 
-    try {
-        const querystring = module.indexOf("?");
-        if (querystring >= 0) {
-            args = new URLSearchParams(module.substring(querystring+1));
-            module = module.substring(0, querystring);
-        }
+    if (querystring >= 0) {
+        args = new URLSearchParams(module.substring(querystring+1));
+        module = module.substring(0, querystring);
+    }
 
-        loader = require(await resolve(module));
-    } catch(e) {
+    let { filename, stat } = await resolve(module);
+
+    if (!stat) {
         yield new Message(LEVEL_FATAL, null, `Cannot resolve loader: ${module}`);
+        return ;
+    }
+
+    const loader = require(filename);
+
+    // Import our source transform
+    ({ filename, stat } = await resolve(target, location.path && path.dirname(location.path)));
+
+    if (!stat) {
+        yield new Message(LEVEL_FATAL, null, `Cannot locate file: ${target}`);
         return ;
     }
 
@@ -28,7 +36,7 @@ async function* include (location, target, module = 'text.loader.js') {
     const source_location = {
         source: "include",
         loader: module,
-        path: fn,
+        path: filename,
         parent: location
     };
 
@@ -36,11 +44,11 @@ async function* include (location, target, module = 'text.loader.js') {
     yield {
         type: "Dependancy",
         source: "include",
-        filename: fn
-    }
+        filename, stat
+    };
 
     // Tag all our outbound blocks as being from this process
-    for await (let block of loader(fn, args)) {
+    for await (let block of loader(filename, args)) {
         if (block instanceof Message) {
             yield block;
             continue ;

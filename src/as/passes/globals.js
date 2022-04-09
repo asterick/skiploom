@@ -46,6 +46,9 @@ async function* globals(scope, feed) {
                 yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: globals) ${token.type}`);
                 continue ;
 
+            case "EndDirective":
+                return ;
+
             default:
                 // Forward to next phase
                 yield token;
