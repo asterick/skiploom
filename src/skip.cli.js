@@ -2,10 +2,16 @@
 const { ArgumentParser } = require('argparse');
 
 const { searchPaths, resolve } = require( "./util/resolve");
-const { defines, assemble } = require("./as");
+const { generate } = require("./util/table.js");
+const { defines, context, assemble } = require("./as");
+
+const {
+    LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
+    Message
+} = require ("./util/logging.js");
 
 const parser = new ArgumentParser({
-    description: 'S1C88 Assembler and Linker',
+    description: 'Skiploom - S1C88 Microcontroller Toolchain',
     add_help: true
 });
 
@@ -22,9 +28,32 @@ searchPaths.unshift(process.cwd(), ... argv.include);
 
 // Process our files
 async function main() {
-    for await (let object of assemble(argv)) {
+    let { files, define } = argv;
+    const scope = context(define);
+    
+    // Make sure our instruction table is ready
+    await generate();
+
+    for (let fn of files) {
+        console.log(fn)
+        // Create a new variable scope (protect globals)
+        for await (block of assemble(fn, scope)) {
+            // Emitted a log message
+            if (block instanceof Message) {
+                console.log(block.toString());
+                if (block.level == LEVEL_FATAL) return ;
+                continue ;
+            }
+
+            console.dir(block);
+            //yield block;
+        }
+
+        // Emit sections + definitions here
         //console.dir(object);
     }
+
+    //console.log(scope);
 }
 
 main();

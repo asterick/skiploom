@@ -1,17 +1,11 @@
 const { expressionParser } = require("./parsers.js");
 const { Context } = require("./context.js");
 const { passes } = require("./passes/index.js")
-const { generate } = require("../util/table.js");
 
 const {
     isValueType, autoType,
     asNumber, asString, asTruthy, asName,
 } = require("./helper.js");
-
-const {
-    LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
-    Message
-} = require ("../util/logging.js");
 
 /* This creates a namespace of defines */
 function defines(... pairs) {
@@ -56,12 +50,12 @@ const ConditionNames = [
     "NF0", "NF1", "NF2", "NF3",
 ];
 
-async function* assemble_file(path, globals)
+function context(define)
 {
     // Setup our default context
     const scope = new Context({
         globals: {
-            ... globals,
+            ... defines(... define),
 
             radix: {
                 export: false,
@@ -100,43 +94,19 @@ async function* assemble_file(path, globals)
         variable.reserved = true;
     }
 
+    return scope;
+}
+
+async function* assemble(path, scope)
+{
     // Load our file
     const location = { source: "command-line" };
     const tree = passes.include(location, path);
     yield* passes.assemble(scope, tree);
 }
 
-async function* assemble({ files, define }) {
-    const globals = defines(... define);
-
-    // Make sure our instruction table is ready
-    await generate();
-
-    for (let fn of files) {
-        // This object file contains this dependancy
-        yield {
-            type: "Dependancy",
-            filename: fn
-        }
-
-        // Create a new variable scope (protect globals)
-        for await (block of assemble_file(fn, globals)) {
-            // Emitted a log message
-            if (block instanceof Message) {
-                console.log(block.toString());
-                if (block.level == LEVEL_FATAL) return ;
-                continue ;
-            }
-
-            console.dir(block);
-            //yield block;
-        }
-
-        // Emit sections + definitions here
-    }
-}
-
 module.exports = {
     defines,
+    context,
     assemble
 };
