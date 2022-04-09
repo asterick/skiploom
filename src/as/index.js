@@ -97,11 +97,11 @@ function context(define)
     return scope;
 }
 
-async function* assemble(path, scope)
+async function* assemble(path, scope, loader)
 {
     // Load our file
     const location = { source: "command-line" };
-    const tree = passes.include(location, path);
+    const tree = passes.include(location, path, loader);
     yield* passes.assemble(scope, tree);
 }
 

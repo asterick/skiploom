@@ -6,7 +6,7 @@ const {
     Message
 } = require ("../../util/logging.js");
 
-async function* include (location, target, module = 'text.loader.js') {
+async function* include (location, target, module) {
     const querystring = module.indexOf("?");
     let args = null;
 

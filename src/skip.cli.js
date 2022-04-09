@@ -19,6 +19,7 @@ parser.add_argument('-f', '--force', { action: 'store_true', help: "Force assemb
 parser.add_argument('-v', '--version', { action: 'version', version: require("../package.json").version });
 parser.add_argument('-I', '--include', { action: 'append', help: "Add include to search path", 'default': [] });
 parser.add_argument('-D', '--define', { action: 'append', help: "Define symbol", 'default': [] });
+parser.add_argument('-L', '--loader', { action: 'store', help: "Set default file loader", 'default': "text.loader.js" });
 parser.add_argument('-o', '--output', { help: "Output filename" })
 parser.add_argument('files', { metavar:'file', nargs:'+', help: 'Files to bundle' })
 
@@ -43,10 +44,9 @@ async function main() {
 
     for (let fn of files) {
         // Create a new variable scope (protect globals)
-        for await (block of assemble(fn, scope)) {
+        for await (block of assemble(fn, scope, argv.loader)) {
             // Emitted a log message
             if (block instanceof Message) {
-                console.log(block.toString());
                 if (block.level == LEVEL_FATAL) process.exit(1);
                 continue ;
             }
