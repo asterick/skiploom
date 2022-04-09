@@ -52,7 +52,6 @@ async function main() {
             }
 
             if (block.type == "Dependancy") {
-                console.log(block);
                 continue ;
             }
 
