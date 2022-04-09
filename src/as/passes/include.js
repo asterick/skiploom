@@ -48,13 +48,11 @@ async function* include (location, target, module = 'text.loader.js') {
     };
 
     // Tag all our outbound blocks as being from this process
-    for await (let block of loader(filename, args)) {
+    for await (let block of loader(source_location, filename, args)) {
         if (block instanceof Message) {
             yield block;
             continue ;
         }
-
-        Object.assign(block.location, source_location);
 
         yield block;
     }

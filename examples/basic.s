@@ -19,8 +19,10 @@ _main:
         CARL _main
         RET
 
-        INCLUDE "./include.s" USING "text.loader.js?arguments"
-
         EXTERN  (CODE, SHORT) __START
         EXTERN  (DATA) __lc_es
+
+        INCLUDE "./include.s" USING "text.loader.js?arguments"
+        INCLUDE "./experiment.c" USING "c88.loader.js"
+
         END
