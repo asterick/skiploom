@@ -16,9 +16,10 @@ _main:
         LD [IX+1+2], A
         LD [SP+some_value], IX
         LD [BR:0FFh], #0CBh
-        LD NB, @CPAG(_main)
-        CARL #@COFF(_main)
+        CARL _main
         RET
+
+        INCLUDE "./include.s" USING "text.loader.js"
 
         EXTERN  (CODE, SHORT) __START
         EXTERN  (DATA) __lc_es
