@@ -4,7 +4,7 @@ const path = require("path");
 
 // By default, load relative to source file
 // followed by library and loaders
-const searchPaths = ['../lib', '../loaders'].map((p) => path.join(__dirname, p));
+const searchPaths = ['../../lib', '../loaders'].map((p) => path.join(__dirname, p));
 
 async function resolve(fn, relative = process.cwd()) {
     // Absolute path, simply perform stat
