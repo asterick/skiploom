@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 const { ArgumentParser } = require('argparse');
 
-const { searchPaths, resolve } = require( "./util/resolve");
+const { searchPaths } = require( "./util/resolve");
 const { generate } = require("./util/table.js");
-const { defines, context, assemble } = require("./as");
+const { context, assemble } = require("./as");
 
 const {
     LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
