@@ -16,10 +16,8 @@ irq DUPA flag, 277h, 276h, 275h, 274h, 273h, 272h, 271h, 270h, 285h, 284h, 283h,
         DEFSECT (".irq_weak_handler" .. irq), CODE, FIT 8000H
 _interrupt_handler\?irq:
         PUSH BR
-        reg SET (flag >> 4)
-        bit SET (1 << (flag & 15))
         LD BR, #20h
-        LD [BR:reg], #bit
+        LD [BR:(flag >> 4)], #(1 << (flag & 0fh))
         POP BR
         RETE
 ENDM
