@@ -3,8 +3,6 @@ const {
     asNumber, asString, asTruthy, asName,
 } = require("../helper.js");
 
-const { uuid } = require("../../util/uuid.js");
-const { passes } = require("./index.js")
 
 const {
     LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
@@ -23,7 +21,10 @@ async function* globals(scope, feed) {
             // Global Directives
             case "GlobalDirective":
                 for (const name of token.names.map(asName)) {
-                    scope.global(name).location = token.location;
+                    Object.assign(scope.global(name), {
+                        location: token.location,
+                        weak: token.weak
+                    });
                 }
                 continue ;
 

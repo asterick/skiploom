@@ -10,7 +10,7 @@ Assembler / Linker compatible with the assembly syntax of the Epson S1C88 toolch
     * "Fragment": used to define position of a label
  * Resolve fragments (with sliding ranges)
  * Noticing conditions or registers in complex expressions should throw a failure
-* Allow for un-balanced definitions as the result of prospecting
+ * Allow for un-balanced definitions as the result of prospecting
 
 ## Differences from AS88
 * @DEF and @MXP only take symbols, behavior may vary

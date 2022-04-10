@@ -87,13 +87,13 @@ directive ->
                 type: "ExternDirective",
                 location: location(id),
                 names,
-                attributes: Object.assign({}, ... attributes)
+                attributes: attributes ? Object.assign({}, ... attributes) : attributes
           })
       %}
     | symbol "EQU" expression {% ([name, _, value]) => ({ type: "EquateDirective", name, value, location:name.location }) %}
     | symbol "SET" expression {% ([name, _, value]) => ({ type: "SetDirective", name, value, location:name.location }) %}
     | "LOCAL" symbol_list {% ([id, names]) => ({ type: "LocalDirective", names, location:location(id) }) %}
-    | "GLOBAL" symbol_list {% ([id, names]) => ({ type: "GlobalDirective", names, location:location(id) }) %}
+    | "GLOBAL" weak_attr:? symbol_list {% ([id, weak, names]) => ({ type: "GlobalDirective", weak: Boolean(weak), names, location:location(id) }) %}
     | "NAME" expression {% ([id, name]) => ({ type: "NameDirective", name, location:location(id) }) %}
 
     | "ASCII" expression_list {% ([id,data]) => ({ type: "AsciiBlockDirective", data, location:location(id) }) %}
@@ -115,6 +115,9 @@ directive ->
     | symbol "MACRO" symbol_list eol source_body "ENDM"
       {% ([name,,parameters,,body]) => ({ type: "MacroDefinitionDirective", name, parameters, body, location:name.location }) %}
     | if_directive
+
+weak_attr ->
+        "WEAK" {% () => true %}
 
 if_directive ->
       "IF" expression eol source_body
