@@ -58,7 +58,7 @@ async function main() {
             }
 
             // Handle non-assembler directives here
-            console.dir(block);
+            //console.dir(block);
         }
 
         // Emit sections + definitions here
