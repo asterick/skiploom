@@ -35,7 +35,7 @@ const BinaryOperations = {
 function at(index) { return (data) => data[index] }
 function ignore() { return null }
 function location({ line, col }) {
-      return { line, col }
+      return { line, col, ... global.parser_source }
 }
 
 function unary([op, value]) {

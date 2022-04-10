@@ -41,7 +41,6 @@ async function main() {
     // Make sure our instruction table is ready
     await generate();
 
-    // 
     for (let fn of files) {
         const scope = context(define);
 
@@ -63,9 +62,8 @@ async function main() {
         }
 
         // Emit sections + definitions here
+        //console.dir(scope.globals)
     }
-
-    //console.log(scope);
 }
 
 main();
