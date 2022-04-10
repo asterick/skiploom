@@ -15,7 +15,7 @@ async function* defaultLoader(source_location, path, args) {
     const parser = sourceParser();
 
     try {
-        let stdout = execFileSync(COMPILER_EXECUTABLE, ['-n', '-Ml', path]);
+        let stdout = execFileSync(COMPILER_EXECUTABLE, ['-v', '-n', '-Ml', path]);
         global.parser_source = source_location;
         parser.feed(stdout.toString('utf-8'));
         parser.feed("\n");
