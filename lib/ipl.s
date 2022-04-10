@@ -20,7 +20,7 @@ _interrupt_handler\?irq:
         LD [BR:(flag >> 4)], #(1 << (flag & 0fh))
         POP BR
         RETE
-ENDM
+        ENDM
 
 ; ===
 ; === Memory scatter loader
