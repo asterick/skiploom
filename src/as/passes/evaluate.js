@@ -263,6 +263,11 @@ function flatten(ast, ctx, propegate, guard) {
             const variable = ctx.get(ast.name) || ctx.local(ast.name);
             variable.used = true;
 
+            // Weak references cannot be evaluated until just before linker phase
+            if (variable.global && variable.weak) {
+                return ast;
+            }
+
             // Do not resolve symbols outside scope
             if (!variable.global && !ctx.isNear(ast.name)) {
                 return ast;

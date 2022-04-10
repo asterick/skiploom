@@ -31,7 +31,6 @@ searchPaths.unshift(process.cwd(), './', ... argv.include);
 // Process our files
 async function main() {
     let { files, define } = argv;
-    const scope = context(define);
 
     // Check dependancies for change
     if (!argv.force) {
@@ -42,11 +41,15 @@ async function main() {
     // Make sure our instruction table is ready
     await generate();
 
+    // 
     for (let fn of files) {
+        const scope = context(define);
+
         // Create a new variable scope (protect globals)
         for await (block of assemble(fn, scope, argv.loader)) {
             // Emitted a log message
             if (block instanceof Message) {
+                console.log(block.toString());
                 if (block.level == LEVEL_FATAL) process.exit(1);
                 continue ;
             }
@@ -56,7 +59,7 @@ async function main() {
             }
 
             // Handle non-assembler directives here
-            //console.dir(block);
+            console.dir(block);
         }
 
         // Emit sections + definitions here

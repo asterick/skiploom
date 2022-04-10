@@ -43,10 +43,6 @@ async function* globals(scope, feed) {
                 }
                 continue ;
 
-            case "DefineSectionDirective":
-                yield new Message(LEVEL_FAIL, token.location, `Unhandled directive (pass: globals) ${token.type}`);
-                continue ;
-
             case "EndDirective":
                 return ;
 

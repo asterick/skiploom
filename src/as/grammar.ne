@@ -174,7 +174,7 @@ symbol_list ->
 # Expressions
 expression ->
       logical_or_expr {% id %}
-    | "#" logical_or_expr {% ([id, value]) => ({ type:"ImmediateValue", value, location:location(id) }) %}
+    | "#" logical_or_expr {% ([_, value]) => (value) %}
     | "[" logical_or_expr "]" {% ([id, address,]) => ({ type:"IndirectMemory", address, location:location(id) }) %}
     | "[" logical_or_expr ":" logical_or_expr "]" {% ([id, register, _, offset,]) => ({ type:"IndirectRegisterOffset", register, offset, location:location(id) }) %}
 

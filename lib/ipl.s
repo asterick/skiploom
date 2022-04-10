@@ -23,21 +23,38 @@
         GLOBAL WEAK _interrupt_handler22
         GLOBAL WEAK _interrupt_handler23
         GLOBAL WEAK _interrupt_handler24
+        GLOBAL WEAK _interrupt_handler25
+        EXTERN (CODE) _start
 
         DEFSECT ".irq_vectors", CODE, FIT 8000H, ROMDATA AT 2100H
         ; Setup our interrupt vectors
-        JRL    _main
+        JRL    _scatter_load
         index DUP 25
         ALIGN 6
         JRL _interrupt_handler\?index
         ENDM
 
-        DEFSECT ".irq_weak_handler", CODE, FIT 8000H
-        index DUP 25
-_interrupt_handler\?index:
-        ENDM
-        RETI
+; ===
+; === Weak interrupt handlers
+; ===
+irq DUPA flag, 277h, 276h, 275h, 274h, 273h, 272h, 271h, 270h, 285h, 284h, 283h, 282h, 2A7h, 2A6h, 297h, 296h, 295h, 294h, 293h, 292h, 291h, 290h, 2A2h, 2A1h, 2A0h, 280h
+        DEFSECT (".irq_weak_handler" .. irq), CODE, FIT 8000H
+_interrupt_handler\?irq:
+        PUSH BR
+        reg SET (flag >> 4)
+        bit SET (1 << (flag & 15))
+        LD [BR:reg], #bit
+        POP BR
+        RETE
+ENDM
 
-        WARN "poot"
+; ===
+; === Memory scatter loader
+; ===
 
-        ;END
+        DEFSECT ".init_ram", CODE, FIT 8000H
+_scatter_load:
+        ; This will initialize ram
+        JRL _start
+
+        END
