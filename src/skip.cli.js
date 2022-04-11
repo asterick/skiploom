@@ -94,7 +94,7 @@ async function main() {
     for await(block of collate(argv)) {
         // Emitted a log message
         if (block instanceof Message) {
-            console.log(block.level, block.toString());
+            console.log(block.toString());
 
             if (block.level <= LEVEL_FAIL) {
                 // This error will prevent output
