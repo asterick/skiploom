@@ -45,7 +45,6 @@ async function* collate(argv, exports) {
 
         if (object) {
             // TODO: ACTUALLY EMIT EXPORTS HERE
-            console.log("GGG", object);
             continue ;
         } else {
             // Create a new variable scope (protect globals)

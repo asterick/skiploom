@@ -153,8 +153,6 @@ function decode(view) {
         }
     }
 
-    console.log(tokens)
-
     return tokens[0];
 }
 
