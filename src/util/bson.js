@@ -113,19 +113,28 @@ async function* encode(... stack) {
 async function save(fn, object)
 {
     const fout = await fs.open(fn, "w");
-    const byte = new Uint8Array(1);
+    const byte_data = new Uint8Array(1024);
+    let byte_count = 0;
  
     fout.write("\x88OBJ");
 
     for await(buffer of encode(object)) {
         if (ArrayBuffer.isView(buffer)) {
+            await fout.write(byte_data, 0, byte_count);
             await fout.write(buffer);
+            byte_count = 0;
         } else {
-            byte[0] = buffer;
-            await fout.write(byte);
+            byte_data[byte_count++] = buffer;
+        }
+
+        // flush our buffer
+        if (byte_count >= byte_data.length) {
+            await fout.write(byte_data, 0, byte_count);
+            byte_count = 0;
         }
     }
- 
+
+    await fout.write(byte_data, 0, byte_count);
     await fout.close();
 }
 
