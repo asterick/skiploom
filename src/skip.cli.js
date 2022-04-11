@@ -44,8 +44,9 @@ async function* collate(argv, exports) {
         let globals;
 
         if (object) {
-            // TODO: ACTUALLY EMIT EXPORTS HERE
-            continue ;
+            // Load our object file and pass it in as already procesed
+            globals = object.exports;
+            yield* object.blocks;
         } else {
             // Create a new variable scope (protect globals)
             const scope = context(define);
@@ -126,7 +127,7 @@ async function main() {
 
     // Finally generate our output
     if (argv.link) {
-        console.error("LINKING IS NOT COMPLETE")
+        console.error("LINKING IS NOT COMPLETE");
         process.exit(1);
     } else {
         bson.save(argv.output, {
