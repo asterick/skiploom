@@ -58,7 +58,7 @@ function context(define)
             ... defines(... define),
 
             radix: {
-                export: false,
+                reserved: true,
                 value: { ... autoType(10) }
             }
         }

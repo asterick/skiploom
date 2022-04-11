@@ -14,7 +14,6 @@ _main:
         SYMB    ALAB, _main, #257
 
         LD [IX+1+2], A
-        LD [SP+some_value], IX
         LD [BR:0FFh], #0CBh
         CARL _main
         RET
@@ -22,7 +21,7 @@ _main:
         EXTERN  (CODE, SHORT) __START
         EXTERN  (DATA) __lc_es
 
-        INCLUDE "./include.s" USING "text.loader.js?arguments"
+        INCLUDE "./include.s"
         INCLUDE "./experiment.c" USING "c88.loader.js"
 
         END

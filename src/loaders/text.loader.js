@@ -1,5 +1,5 @@
 const { sourceParser } = require("../as/parsers.js");
-const fs = require('fs').promises;
+const fs = require('fs/promises');
 
 // Export AST chunks
 async function* defaultLoader(source_location, path, args) {

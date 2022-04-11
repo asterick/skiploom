@@ -1,0 +1,2 @@
+cd "$(dirname "$0")"
+../bin/skip -d basic.d -o basic.o basic.s
