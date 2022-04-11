@@ -34,7 +34,7 @@ const argv = parser.parse_args();
 // Search paths should include supplied paths, and the current working directory (highest priority)
 searchPaths.unshift(process.cwd(), './', ... argv.include);
 
-async function* collate(argv) {
+async function* collate(argv, exports) {
     let { files, define } = argv;
 
     // Load all our objects into memory
@@ -45,7 +45,7 @@ async function* collate(argv) {
 
         if (object) {
             // TODO: ACTUALLY EMIT EXPORTS HERE
-            console.log(object);
+            console.log("GGG", object);
             continue ;
         } else {
             // Create a new variable scope (protect globals)
@@ -91,7 +91,7 @@ async function main() {
     await generate();
 
     // Begin collating all our files into one large object
-    for await(block of collate(argv)) {
+    for await(block of collate(argv, exports)) {
         // Emitted a log message
         if (block instanceof Message) {
             console.log(block.toString());
@@ -103,6 +103,7 @@ async function main() {
                 // This is a terminal error, abort early
                 if (block.level <= LEVEL_FATAL) break ;
             }
+            continue ;
         }
 
         if (block.type == "Dependancy") {

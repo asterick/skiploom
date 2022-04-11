@@ -1,2 +1,2 @@
-basic2.o basic.d: 
+basic2.rom basic.d: 
 :

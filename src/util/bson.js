@@ -25,15 +25,6 @@ class StreamDataView extends DataView {
         this.dec = new TextDecoder();
     }
 
-    getString(length) {
-        const data = this.getArrayBuffer(length);
-        return this.dec.decode(data);
-    }
-
-    getArrayBuffer(length) {
-        return this.buffer.slice(this.position, this.position += length);
-    }
-
     getNextUint8(... args) {
         return this.getUint8(this.position++, ... args);
     }
@@ -42,6 +33,15 @@ class StreamDataView extends DataView {
         const data = this.getFloat64(this.position, ... args);
         this.position += 8;
         return data;
+    }
+
+    getArrayBuffer(length) {
+        return this.buffer.slice(this.position, this.position += length);
+    }
+
+    getString(length) {
+        const data = this.getArrayBuffer(length);
+        return this.dec.decode(data);
     }
 
     getInt() {
@@ -59,49 +59,62 @@ class StreamDataView extends DataView {
 
 function decode(view, strings = []) {
     switch (view.getInt()) {
-        case TYPE_UNDEFINED:
-            return undefined;
-        case TYPE_NULL:
-            return null;
-        case TYPE_FALSE:
-            return false;
-        case TYPE_TRUE:
-            return true;
-        case TYPE_PINTEGER:
-            return view.getInt();
-        case TYPE_NINTEGER:
-            return -view.getInt();
-        case TYPE_DOUBLE:
-            return view.getNextFloat64(true);
-        case TYPE_STRING:
-            {
-                const index = view.getInt();
+    case TYPE_UNDEFINED:
+        return undefined;
+    case TYPE_NULL:
+        return null;
+    case TYPE_FALSE:
+        return false;
+    case TYPE_TRUE:
+        return true;
+    case TYPE_PINTEGER:
+        return view.getInt();
+    case TYPE_NINTEGER:
+        return -view.getInt();
+    case TYPE_DOUBLE:
+        return view.getNextFloat64(true);
+    case TYPE_STRING:
+        {
+            const index = view.getInt();
 
-                if (index >= strings.length) {
-                    const string = view.getString(view.getInt());
-                    strings.push(string);
-                    return string;
-                } else {
-                    return strings[index];
-                }
-                return ;
+            if (index >= strings.length) {
+                const string = view.getString(view.getInt());
+                strings.push(string);
+                return string;
+            } else {
+                return strings[index];
             }
-        case TYPE_ARRAYBUFFER:
-            return view.getArrayBuffer(view.getInt());
-        case TYPE_ARRAY:
-            {
-                let length = view.getInt();
-                let output = [];
+            return ;
+        }
+    case TYPE_ARRAYBUFFER:
+        return view.getArrayBuffer(view.getInt());
+    
+    case TYPE_ARRAY:
+        {
+            let length = view.getInt();
+            let output = [];
 
-                while (length-- > 0) {
-                    output.push(decode(view, strings));
-                }
-                return output;
+            while (length-- > 0) {
+                output.push(decode(view, strings));
             }
-        case TYPE_OBJECT:
+
+            return output;
+        }
+    case TYPE_OBJECT:
+        {
+            let output = {}
+            let length = view.getInt();
+        
+            while (length-- > 0) {
+                let key = decode(view, strings);               
+                output[key] = decode(view, strings);
+            }
+
+            return output;
+        }
     }
 
-    return "POOP";
+    throw new Error("Illegal token found in object file");
 }
 
 async function load(fn)
@@ -140,71 +153,74 @@ async function* encode(... stack) {
         const object = stack.shift();
 
         switch (typeof object) {
-            case 'undefined':
-                yield TYPE_UNDEFINED;
-                break ;
+        case 'undefined':
+            yield TYPE_UNDEFINED;
+            break ;
 
-            case 'boolean':
-                yield object ? TYPE_TRUE : TYPE_FALSE;
-                break ;
-            
-            case 'number':
-                if ((object|0) == object) {
-                    if (object < 0) {
-                        yield TYPE_NINTEGER;
-                        yield* encode_int(-object);
-                    } else {
-                        yield TYPE_PINTEGER;
-                        yield* encode_int(object);
-                    }
+        case 'boolean':
+            yield object ? TYPE_TRUE : TYPE_FALSE;
+            break ;
+        
+        case 'number':
+            if ((object|0) == object) {
+                if (object < 0) {
+                    yield TYPE_NINTEGER;
+                    yield* encode_int(-object);
                 } else {
-                    yield TYPE_DOUBLE;
-                    yield new Float64Array([object]).buffer;
+                    yield TYPE_PINTEGER;
+                    yield* encode_int(object);
                 }
-                break ;
-            
-            case 'string':
-                yield TYPE_STRING;
+            } else {
+                yield TYPE_DOUBLE;
+                yield new Float64Array([object]);
+            }
+            break ;
+        
+        case 'string':
+            yield TYPE_STRING;
 
-                if (strings.indexOf(object) >= 0) {
-                    yield* encode_int(strings.indexOf(object));
-                } else {
-                    yield* encode_int(strings.push(object) - 1);
-                    const buff = Buffer.from(object, 'utf-8')
-                    yield* encode_int(buff.length);
-                    yield buff;
+            if (strings.indexOf(object) >= 0) {
+                yield* encode_int(strings.indexOf(object));
+            } else {
+                yield* encode_int(strings.push(object) - 1);
+                const buff = Buffer.from(object, 'utf-8')
+                yield* encode_int(buff.length);
+                yield buff;
+            }
+
+            break ;
+
+        case 'object':
+            if (object === null) {
+                yield TYPE_NULL;
+            } else if (Array.isArray(object)) {
+                yield TYPE_ARRAY;
+                yield* encode_int(object.length);
+                for (let i = object.length - 1; i >= 0; i--) {
+                    stack.unshift(object[i]);
                 }
-
-                break ;
-
-            case 'object':
-                if (object === null) {
-                    yield TYPE_NULL;
-                } else if (Array.isArray(object)) {
-                    yield TYPE_ARRAY;
-                    yield* encode_int(object.length);
-                    stack.push(... object);
-                } else if (object instanceof ArrayBuffer) {
-                    yield TYPE_ARRAYBUFFER;
-                    yield new Uint8Array(object);
-                } else if (ArrayBuffer.isView(object)) {                   
-                    yield TYPE_ARRAYBUFFER;
-                    yield* encode_int(object.length)
-                    yield object;
-                } else {
-                    let count = 0;
-                    
-                    yield TYPE_OBJECT;
-                    for (const entry of Object.entries(object)) {
-                        stack.push(... entry);
-                        count ++;
-                    }
-                    yield* encode_int(count);
-                }
+            } else if (object instanceof ArrayBuffer) {
+                yield TYPE_ARRAYBUFFER;
+                yield* encode_int(object.byteLength)
+                yield new Uint8Array(object);
+            } else if (ArrayBuffer.isView(object)) {                   
+                yield TYPE_ARRAYBUFFER;
+                yield* encode_int(object.buffer.byteLength)
+                yield object;
+            } else {
+                let count = 0;
                 
-                break ;
-            default:
-                throw new Error(`Encode ${typeof object}`)
+                yield TYPE_OBJECT;
+                for (const entry of Object.entries(object)) {
+                    stack.unshift(... entry);
+                    count ++;
+                }
+                yield* encode_int(count);
+            }
+
+            break ;
+        default:
+            throw new Error(`Encode ${typeof object}`)
         }
     } while (stack.length > 0);
 }
@@ -214,8 +230,6 @@ async function save(fn, object)
     const fout = await fs.open(fn, "w");
     const byte_data = new Uint8Array(4096);
     let byte_count = 0;
- 
-    object = [undefined, null, true, false, -999, 999, "farts", "a", "farts", new Uint8Array([1,2,3]), 3.14159];
 
     fout.write(WATERMARK);
 
