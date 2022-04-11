@@ -4,6 +4,8 @@ const { ArgumentParser } = require('argparse');
 const { searchPaths } = require( "./util/resolve");
 const { generate } = require("./util/table.js");
 const { context, assemble } = require("./as");
+const path = require("path");
+const fs = require('fs');
 
 const {
     LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
@@ -15,12 +17,12 @@ const parser = new ArgumentParser({
     add_help: true
 });
 
-parser.add_argument('-f', '--force', { action: 'store_true', help: "Force assembly, even if dependancies have not changed", 'default': false } )
+parser.add_argument('-d', '--make-dependancies', { action: 'store', help: "Add dependancy file generation" } )
 parser.add_argument('-v', '--version', { action: 'version', version: require("../package.json").version });
 parser.add_argument('-I', '--include', { action: 'append', help: "Add include to search path", 'default': [] });
 parser.add_argument('-D', '--define', { action: 'append', help: "Define symbol", 'default': [] });
 parser.add_argument('-L', '--loader', { action: 'store', help: "Set default file loader", 'default': "text.loader.js" });
-parser.add_argument('-o', '--output', { help: "Output filename" })
+parser.add_argument('-o', '--output', { help: "Output filename", default: 'a.out' })
 parser.add_argument('files', { metavar:'file', nargs:'+', help: 'Files to bundle' })
 
 const argv = parser.parse_args();
@@ -30,6 +32,7 @@ searchPaths.unshift(process.cwd(), './', ... argv.include);
 
 // Process our files
 async function main() {
+    const dependancies = [];
     let { files, define } = argv;
 
     // Check dependancies for change
@@ -43,7 +46,7 @@ async function main() {
 
     for (let fn of files) {
         const scope = context(define);
-
+        
         // Create a new variable scope (protect globals)
         for await (block of assemble(fn, scope, argv.loader)) {
             // Emitted a log message
@@ -54,6 +57,7 @@ async function main() {
             }
 
             if (block.type == "Dependancy") {
+                dependancies.push(path.relative(process.cwd(), block.filename));
                 continue ;
             }
 
@@ -64,6 +68,17 @@ async function main() {
         // Emit sections + definitions here
         //console.dir(scope.globals)
     }
+
+    // Generate dependancy file
+    if (argv.make_dependancies) {
+        fs.writeFileSync(argv.make_dependancies, 
+            `${argv.output} ${argv.make_dependancies}: ${dependancies.join(" ")}\n${dependancies.join(" ")}:\n`,
+            {
+                encoding: "utf8",
+                flag: "w",
+                mode: 0o666
+            });
+    }    
 }
 
 main();
