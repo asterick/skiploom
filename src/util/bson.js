@@ -157,7 +157,7 @@ function decode(view) {
         }
     }
 
-    return tokens;
+    return tokens[0];
 }
 
 async function load(fn)
