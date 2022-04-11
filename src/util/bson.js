@@ -179,9 +179,9 @@ async function load(fn)
     }
 
     const version = decode(view);
-    //if (version != OBJECT_VERSION) {
-        //throw new Error(`Cannot process object file version ${version}`);
-    //}
+    if (version != OBJECT_VERSION) {
+        throw new Error(`Cannot process object file version ${version}`);
+    }
 
     return decode(view);
 }
