@@ -2,7 +2,8 @@ const { resolve } = require("./resolve.js");
 const fs = require("fs/promises");
 const { isTypedArray } = require("util/types");
 
-const WATERMARK = "\x01OBJ";
+const WATERMARK = "skiploom-object";
+const OBJECT_VERSION = 1;
 
 const TYPE_UNDEFINED    = 0;
 const TYPE_NULL         = 1;
@@ -135,6 +136,10 @@ async function load(fn)
         return null;
     }
 
+    if (decode(view) != OBJECT_VERSION) {
+        throw new Error(`Cannot process object file version ${VERSION}`);
+    }
+
     return decode(view);
 }
 
@@ -233,7 +238,7 @@ async function save(fn, object)
 
     fout.write(WATERMARK);
 
-    for await(buffer of encode(object)) {
+    for await(buffer of encode(OBJECT_VERSION, object)) {
         if (ArrayBuffer.isView(buffer)) {
             await fout.write(byte_data, 0, byte_count);
             await fout.write(buffer);
