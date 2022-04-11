@@ -39,16 +39,27 @@ async function* collate(argv) {
 
     // Load all our objects into memory
     for (let fn of files) {
-        bson.read(fn);
-        // TODO: DETECT OBJECTS AND IMPORT THEM INTO THE COLLATED SECTION
+        // Check if this is a assembler object file, if so import it special 
+        const object = await bson.load(fn);
+        let globals;
 
-        // Create a new variable scope (protect globals)
-        const scope = context(define);
+        if (object) {
+            // TODO: ACTUALLY EMIT EXPORTS HERE
+            console.log(object);
+            continue ;
+        } else {
+            // Create a new variable scope (protect globals)
+            const scope = context(define);
 
-        // Pass through all our unassembled blocks
-        yield* assemble(fn, scope, argv.loader);
-    
-        for (const [key, global] of Object.entries(scope.globals)) {
+            // Pass through all our unassembled blocks
+            yield* assemble(fn, scope, argv.loader);
+
+            // Finally mark our globals for export
+            globals = scope.globals;
+        }
+        
+        // Export globals
+        for (const [key, global] of Object.entries(globals)) {
             // We do not care about forward references, or reserved words
             if (!global.value || global.reserved) continue ;
 
@@ -63,8 +74,8 @@ async function* collate(argv) {
             }
 
             // Save the most important data from this Export
-            //let { location, weak, value } = global;
-            //exports[key] = { location, weak, value };
+            let { location, weak, value } = global;
+            exports[key] = { location, weak, value };
         }
     }
 }

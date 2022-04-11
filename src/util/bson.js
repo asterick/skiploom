@@ -1,17 +1,37 @@
+const { resolve } = require("./resolve.js");
 const fs = require("fs/promises");
 
-async function load(fn) {
-    const fin = await fs.open(fn, "r");
-    console.log(fin.read(4));
-    
-    await fin.close();
+class StreamDataView extends DataView 
+{
+    constructor(... args) {
+        super(... args);
+
+        this.position = 0;
+    }
 }
 
-async function save(fn, object) {
+async function load(fn)
+{
+    const resolved = await resolve(fn);
+
+    // Cannot find file
+    if (!resolved.stat) return null;
+
+    const fin = await fs.open(resolved.filename, "r");
+    const data = new StreamDataView((await fin.read()).buffer.buffer);
+
+    console.log(data.getInt32(0));
+
+    return null;
+}
+
+async function save(fn, object)
+{
     const fout = await fs.open(fn, "w");
-    
-    // Test
-    fout.write("\x00OBJ");
+ 
+    fout.write("\x88OBJ");
+    //console.log(object);
+ 
     await fout.close();
 }
 
