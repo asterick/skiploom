@@ -193,7 +193,7 @@ function* encode_int(v) {
     } while (v > 0);
 }
 
-async function* encode(... stack) {
+function* encode(... stack) {
     const enc = new TextEncoder();
     const strings = [];
 
@@ -283,7 +283,7 @@ async function save(fn, object)
 
     object = object.exports;
 
-    for await(buffer of encode(OBJECT_VERSION, object)) {
+    for (buffer of encode(OBJECT_VERSION, object)) {
         if (ArrayBuffer.isView(buffer)) {
             await fout.write(byte_data, 0, byte_count);
             await fout.write(buffer);
