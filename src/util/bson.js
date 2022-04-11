@@ -16,28 +16,24 @@ const TYPE_STRING       = 7;
 const TYPE_ARRAY        = 8;
 const TYPE_OBJECT       = 9;
 const TYPE_ARRAYBUFFER  = 10;
-const TYPE_ILLEGAL      = 11;
 
-class StreamDataView extends DataView {
-    constructor (... args) {
-        super(... args);
-
+class StreamDataView {
+    constructor (array) {
+        this.array = array;
         this.position = 0;
         this.dec = new TextDecoder();
     }
 
-    getNextUint8(... args) {
-        return this.getUint8(this.position++, ... args);
+    getNextUint8() {
+        return this.array[this.position++];
     }
 
     getNextFloat64(... args) {
-        const data = this.getFloat64(this.position, ... args);
-        this.position += 8;
-        return data;
+        return (new Float64Array(this.getArrayBuffer(8)))[0];
     }
 
     getArrayBuffer(length) {
-        return this.buffer.slice(this.position, this.position += length);
+        return this.array.buffer.slice(this.position, this.position += length);
     }
 
     getString(length) {
@@ -91,7 +87,7 @@ function decode(view) {
             break ;
 
         case TYPE_DOUBLE:
-            tokens.push(view.getNextFloat64(true));
+            tokens.push(view.getNextFloat64());
             break ;
 
         case TYPE_STRING:
@@ -157,6 +153,8 @@ function decode(view) {
         }
     }
 
+    console.log(tokens)
+
     return tokens[0];
 }
 
@@ -167,11 +165,8 @@ async function load(fn)
     // Cannot find file
     if (!resolved.stat) return null;
 
-    const fo = await fs.open(resolved.filename, "r");
-    const ab = (await fo.read()).buffer.buffer;
-    await fo.close();
-
-    const view = new StreamDataView(ab);
+    const array = await fs.readFile(resolved.filename);
+    const view = new StreamDataView(array);
 
     // Watermark does not match simply move on
     if (view.getString(WATERMARK.length) != WATERMARK) {
@@ -280,8 +275,6 @@ async function save(fn, object)
     let byte_count = 0;
 
     fout.write(WATERMARK);
-
-    object = object.exports;
 
     for (buffer of encode(OBJECT_VERSION, object)) {
         if (ArrayBuffer.isView(buffer)) {
