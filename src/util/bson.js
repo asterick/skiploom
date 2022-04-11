@@ -113,7 +113,7 @@ async function* encode(... stack) {
 async function save(fn, object)
 {
     const fout = await fs.open(fn, "w");
-    const byte_data = new Uint8Array(1024);
+    const byte_data = new Uint8Array(4096);
     let byte_count = 0;
  
     fout.write("\x88OBJ");
