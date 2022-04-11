@@ -58,64 +58,106 @@ class StreamDataView extends DataView {
     }
 }
 
-function decode(view, strings = []) {
-    switch (view.getInt()) {
-    case TYPE_UNDEFINED:
-        return undefined;
-    case TYPE_NULL:
-        return null;
-    case TYPE_FALSE:
-        return false;
-    case TYPE_TRUE:
-        return true;
-    case TYPE_PINTEGER:
-        return view.getInt();
-    case TYPE_NINTEGER:
-        return -view.getInt();
-    case TYPE_DOUBLE:
-        return view.getNextFloat64(true);
-    case TYPE_STRING:
-        {
-            const index = view.getInt();
+function decode(view) {
+    const strings = [];
+    const tokens = [];
+    let count = 1;
 
-            if (index >= strings.length) {
-                const string = view.getString(view.getInt());
-                strings.push(string);
-                return string;
-            } else {
-                return strings[index];
+    // Generate a flattened view of the object tree
+    do {
+        switch (view.getInt()) {
+        case TYPE_UNDEFINED:
+            tokens.push(undefined);
+            break ;
+
+        case TYPE_NULL:
+            tokens.push(null);
+            break ;
+
+        case TYPE_FALSE:
+            tokens.push(false);
+            break ;
+
+        case TYPE_TRUE:
+            tokens.push(true);
+            break ;
+
+        case TYPE_PINTEGER:
+            tokens.push(view.getInt());
+            break ;
+
+        case TYPE_NINTEGER:
+            tokens.push(-view.getInt());
+            break ;
+
+        case TYPE_DOUBLE:
+            tokens.push(view.getNextFloat64(true));
+            break ;
+
+        case TYPE_STRING:
+            {
+                const index = view.getInt();
+
+                if (index >= strings.length) {
+                    const string = view.getString(view.getInt());
+                    strings.push(string);
+                    tokens.push(string);
+                } else {
+                    tokens.push(strings[index]);
+                }
             }
-            return ;
+            break ;
+
+        case TYPE_ARRAYBUFFER:
+            tokens.push(view.getArrayBuffer(view.getInt()));
+            break ;
+
+        case TYPE_ARRAY:
+            {
+                let length = view.getInt();
+
+                tokens.push ({ type: 'Array', length: length });
+                count += length;
+            }
+            break ;
+
+        case TYPE_OBJECT:
+            {
+                let length = view.getInt();
+
+                tokens.push ({ type: 'Object', length: length });
+                count += length * 2;
+            }
+            break ;
+
+        default:
+            throw new Error("Illegal token found in object file");
+
         }
-    case TYPE_ARRAYBUFFER:
-        return view.getArrayBuffer(view.getInt());
-    
-    case TYPE_ARRAY:
-        {
-            let length = view.getInt();
-            let output = [];
+    } while (--count > 0);
 
-            while (length-- > 0) {
-                output.push(decode(view, strings));
+    // Work backwards to regenerate the structure
+    for (let i = tokens.length - 1; i >= 0; i--) {
+        const token = tokens[i];
+        if (token instanceof ArrayBuffer) {
+            continue ;
+        } if (token instanceof Object) {
+            if (token.type == 'Array') {
+                tokens[i] = tokens.splice(i+1,token.length);
+            } else if (token.type == 'Object') {
+                let count = tokens[i].length;
+                let output = {};
+
+                tokens[i] = output;
+                while (count-- > 0) {
+                    let [key, value] = tokens.splice(i+1, 2);
+                    output[key] = value;
+                }                            
             }
-
-            return output;
-        }
-    case TYPE_OBJECT:
-        {
-            let output = {}
-            let length = view.getInt();
-        
-            while (length-- > 0) {
-                let key = decode(view, strings);               
-                output[key] = decode(view, strings);
-            }
-
-            return output;
         }
     }
 
-    throw new Error("Illegal token found in object file");
+    return tokens;
 }
 
 async function load(fn)
@@ -136,9 +178,10 @@ async function load(fn)
         return null;
     }
 
-    if (decode(view) != OBJECT_VERSION) {
-        throw new Error(`Cannot process object file version ${VERSION}`);
-    }
+    const version = decode(view);
+    //if (version != OBJECT_VERSION) {
+        //throw new Error(`Cannot process object file version ${version}`);
+    //}
 
     return decode(view);
 }
@@ -237,6 +280,8 @@ async function save(fn, object)
     let byte_count = 0;
 
     fout.write(WATERMARK);
+
+    object = object.exports;
 
     for await(buffer of encode(OBJECT_VERSION, object)) {
         if (ArrayBuffer.isView(buffer)) {
