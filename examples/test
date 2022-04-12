@@ -1,3 +1,0 @@
-cd "$(dirname "$0")"
-../bin/skip -d basic.d -o basic.o basic.s
-../bin/skip -l -d basic.d -o basic2.rom basic.o
