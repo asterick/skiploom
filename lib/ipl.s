@@ -20,13 +20,13 @@ _interrupt_handler\?irq:
         LD [BR:(flag >> 4)], #(1 << (flag & 0fh))
         POP BR
         RETE
-        ENDM
+ENDM
 
 ; ===
 ; === Memory scatter loader
 ; ===
 
-        DEFSECT ".init_ram", CODE, FIT 8000H
+        DEFSECT ".init_ram", CODE, FIT 8000H, ROMDATA
 _scatter_load:
         ; This will initialize ram
         JRL _start

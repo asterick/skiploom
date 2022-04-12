@@ -1,7 +1,10 @@
-; Define our memory layout
-region ram 0x1000 0x1000
-region rom 0x2100 0x200000
-
-; Define how we export to file (we wrap mirror around)
-export 0x200000 0x2100
-export 0x2100 0x1FFFFF
+{
+    "regions": [
+        { type: "ram", start: 0x1000, length:   0x1000 },
+        { type: "rom", start: 0x2100, length: 0x200000 }
+    ],
+    "export": [
+        { start: 0x200000, length:   0x2100 },
+        { start:   0x2100, length: 0x1FDF00 }
+    ]
+}
