@@ -21,7 +21,7 @@ async function* defaultLoader(source_location, path, args) {
         parser.feed("\n");
         global.parser_source = prior_location;
     } catch(e) {
-        yield new Message(LEVEL_FATAL, "null", `C compiler error: ${e.toString()}`);
+        yield new Message(LEVEL_FATAL, `C compiler error: ${e.toString()}`);
         return ;
     }
 
