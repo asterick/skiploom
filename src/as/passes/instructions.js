@@ -208,7 +208,7 @@ function* TypedDataBlock({ type, data }, cast, array) {
                 }
             }
 
-            yield arr;
+            yield arr.buffer;
         } else {
             yield* slice;
         }
@@ -218,6 +218,8 @@ function* TypedDataBlock({ type, data }, cast, array) {
 }
 
 async function* instructions(ctx, tree) {
+    const encoder = new TextEncoder("utf-8");
+
     for await (let token of tree) {
         if (token instanceof Message) {
             yield token;
@@ -227,10 +229,10 @@ async function* instructions(ctx, tree) {
         try {
             switch (token.type) {
                 case "AsciiBlockDirective":
-                    yield* TypedDataBlock(token, (v) => encoder.encode(asString(v)));
+                    yield* TypedDataBlock(token, (v) => encoder.encode(asString(v)).buffer);
                     break;
                 case "TerminatedAsciiBlockDirective":
-                    yield* TypedDataBlock(token, (v) => encoder.encode(asString(v) + '\0'));
+                    yield* TypedDataBlock(token, (v) => encoder.encode(asString(v) + '\0').buffer);
                     break;
                 case "DataBytesDirective":
                     yield* TypedDataBlock(token, asNumber, Uint8Array);
@@ -238,13 +240,9 @@ async function* instructions(ctx, tree) {
                 case "DataWordsDirective":
                     yield* TypedDataBlock(token, asNumber, Uint16Array);
                     break;
-
-                // These are the unimplemented bits
                 case "DispatchDirective":
-                    // Validate that this instruction is resolved
                     yield* assemble(token);
                     break;
-
                 default:
                     yield token;
             }

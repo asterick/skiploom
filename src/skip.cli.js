@@ -111,8 +111,6 @@ async function main() {
             continue;
         }
 
-        console.log(block);
-
         blocks.push(block);
     }
 
