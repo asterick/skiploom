@@ -8,19 +8,19 @@ const caseInsensitiveKeywords = (map) => {
 function filter_whitespace(lexer) {
     const old = lexer.next;
 
-    return (... args) => {
-        for (;;) {
+    return (...args) => {
+        for (; ;) {
             let token = old.apply(lexer, args);
             switch ((token || {}).type) {
                 case 'ws':
-                    continue ;
+                    continue;
                 case 'identifer':
                 case 'reserved':
                     // This allows us to match against reserved words
                     // without case sensitivity using literals in the
                     // parser.
                     token.text = token.text.toUpperCase();
-                    break ;
+                    break;
             }
             return token;
         }
@@ -28,8 +28,8 @@ function filter_whitespace(lexer) {
 }
 
 function escape(text) {
-    text = text.replace(/\\([0-9]+)/g, (_,v) => String.fromCharCode(parseInt(v, 10)));
-    text = text.replace(/\\x([0-9a-f]+)/ig, (_,v) => String.fromCharCode(parseInt(v, 16)));
+    text = text.replace(/\\([0-9]+)/g, (_, v) => String.fromCharCode(parseInt(v, 10)));
+    text = text.replace(/\\x([0-9a-f]+)/ig, (_, v) => String.fromCharCode(parseInt(v, 16)));
     return JSON.parse(`"${text}"`);
 }
 
@@ -38,21 +38,33 @@ const keywords = {
     reserved: [
         // Reserved words
         "CODE", "DATA", "SHORT", "LONG",
-        "CALLS","SYMB","ALIGN","COMMENT","DEFINE","DEFSECT","END","FAIL","INCLUDE",
-        "MSG","RADIX","SECT","UNDEF","WARN","EQU","EXTERN","GLOBAL","LOCAL","NAME",
-        "SET","ASCII","ASCIZ","DB","DS","DW","DUP","DUPA","DUPC","DUPF","ENDIF",
-        "ENDM","EXITM","IF","MACRO","PMACRO","USING","ELSEIF","ELSE"
+        "CALLS", "SYMB", "ALIGN", "COMMENT", "DEFINE", "DEFSECT", "END", "FAIL", "INCLUDE",
+        "MSG", "RADIX", "SECT", "UNDEF", "WARN", "EQU", "EXTERN", "GLOBAL", "LOCAL", "NAME",
+        "SET", "ASCII", "ASCIZ", "DB", "DS", "DW", "DUP", "DUPA", "DUPC", "DUPF", "ENDIF",
+        "ENDM", "EXITM", "IF", "MACRO", "PMACRO", "USING", "ELSEIF", "ELSE"
+    ],
+    condition: [
+        "LT", "LE", "GT", "GE",
+        "V", "NV", "P", "M",
+        "F0", "F1", "F2", "F3",
+        "NF0", "NF1", "NF2", "NF3"
+    ],
+    register: [
+        "A", "B", "BA",
+        "L", "H", "HL",
+        "SP", "IX", "IY", "BR",
+        "NB", "SC", "EP", "XP", "YP"
     ]
 };
 
 // Our lexer
 const lexer = moo.compile({
     ws: { match: /(?:[ \t\f\v]|\\\r\n?|\\\n\r?)+/ },
-    linefeed: { match:  /\r\n?|\n\r?/, lineBreaks: true },
-    comment: { match:/;(?:[^\n\r\\]|\\(?:\n?\r?|\r?\n?))*/, lineBreaks: true },
+    linefeed: { match: /\r\n?|\n\r?/, lineBreaks: true },
+    comment: { match: /;(?:[^\n\r\\]|\\(?:\n?\r?|\r?\n?))*/, lineBreaks: true },
     string: [
-        { match: /"(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r"])*"/, value: (s) => escape(s.slice(1,-1)) },
-        { match: /'(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r'])*'/, value: (s) => escape(s.slice(1,-1)) },
+        { match: /"(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r"])*"/, value: (s) => escape(s.slice(1, -1)) },
+        { match: /'(?:\\['"tTvVbBfFnNrR]|\\[xX][0-9a-fA-F]+|\\[0-9]+|[^\\\n\r'])*'/, value: (s) => escape(s.slice(1, -1)) },
     ],
     function_name: { match: /@[a-zA-Z0-9]+/, value: (v) => v.slice(1).toUpperCase() },
     identifier: {

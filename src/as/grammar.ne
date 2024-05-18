@@ -173,10 +173,16 @@ symbol_list ->
 
 # Expressions
 expression ->
-      logical_or_expr {% id %}
+      register {% id %}
+    | condition {% id %}
+    | logical_or_expr {% id %}
     | "#" logical_or_expr {% ([_, value]) => (value) %}
-    | "[" logical_or_expr "]" {% ([id, address,]) => ({ type:"IndirectMemory", address, location:location(id) }) %}
-    | "[" logical_or_expr ":" logical_or_expr "]" {% ([id, register, _, offset,]) => ({ type:"IndirectRegisterOffset", register, offset, location:location(id) }) %}
+    | "[" logical_or_expr "]" {% ([id, address,]) => ({ type:"IndirectAbsolute", address, location:location(id) }) %}
+    | "[" register "]" {% ([id, register,]) => ({ type:"IndirectRegister", register, location:location(id) }) %}
+    | "[" register "+" register "]" {% ([id, register, _, index,]) => ({ type:"IndirectRegisterIndex", register, index, location:location(id) }) %}
+    | "[" register "+" logical_or_expr "]" {% ([id, register, _, displace,]) => ({ type:"IndirectRegisterDisplace", register, displace, location:location(id) }) %}
+    | "[" register "-" logical_or_expr "]" {% ([id, register, _, displace,]) => ({ type:"IndirectRegisterDisplace", register, displace: { type:"UnaryOperation", value: displace, op: "Negate", location: location(displace) }, location:location(id) }) %}
+    | "[" register ":" logical_or_expr "]" {% ([id, register, _, offset,]) => ({ type:"IndirectRegisterOffset", register, offset, location:location(id) }) %}
 
 logical_or_expr ->
       logical_and_expr {% id %}
@@ -252,6 +258,12 @@ symbol ->
     | symbol "\\?" identifier {% binary %}
     | symbol "\\%" identifier {% binary %}
     | "^" symbol {% unary %}
+
+register ->
+      %register {% ([id]) => ({ type:"Register", name:id.value, location:location(id) }) %}
+
+condition ->
+      %condition {% ([id]) => ({ type:"Condition", name:id.value, location:location(id) }) %}
 
 identifier ->
       %identifier {% ([id]) => ({ type:"Identifier", name:id.value, location:location(id) }) %}
