@@ -203,12 +203,6 @@ function flatten(ast, ctx, propegate, guard) {
         case "IndirectRegisterIndex":
             return ast;
 
-        case "ImmediateValue":
-            return {
-                ...ast,
-                value: flatten(ast.value, ctx, propegate, guard)
-            };
-
         case "IndirectAbsolute":
             return {
                 ...ast,

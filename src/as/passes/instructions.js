@@ -39,17 +39,10 @@ function lookup_indirect_index(register, index) {
 
 function lookup_param(op_name, param) {
     switch (param.type) {
-        case "ImmediateValue":
-            return [Arguments.IMM, param];
         default:
-            // NOTE: THIS IS A RELATIVE IMMEDIATE VALUE
             return [Arguments.IMM, param];
-        case "IndirectRegisterIndex":
-            return lookup_indirect_index(param.register, param.index);
-        case "IndirectRegisterDisplace":
-            return lookup_indirect_displace(param.register, param.displace);
-        case "IndirectRegisterOffset":
-            return lookup_indirect_offset(param.register, param.offset);
+        case "IndirectAbsolute":
+            return [Arguments.MEM_ABS, param.address];
         case "IndirectRegister":
             switch (param.register.name) {
                 case "HL": return [Arguments.MEM_HL, null];
@@ -58,8 +51,12 @@ function lookup_param(op_name, param) {
                 default:
                     throw new Message(LEVEL_FAIL, param.location, `Cannot access memory with register ${param.register.name}`);
             }
-        case "IndirectAbsolute":
-            return [Arguments.MEM_ABS, param];
+        case "IndirectRegisterIndex":
+            return lookup_indirect_index(param.register, param.index);
+        case "IndirectRegisterDisplace":
+            return lookup_indirect_displace(param.register, param.displace);
+        case "IndirectRegisterOffset":
+            return lookup_indirect_offset(param.register, param.offset);
         case "Register":
             switch (param.name) {
                 case "A": return [Arguments.REG_A, null];
