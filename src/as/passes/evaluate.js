@@ -260,7 +260,7 @@ function flatten(ast, ctx, propegate, guard) {
                     throw new Message(LEVEL_FATAL, ast.location, `Circular reference ${guard.join("->")}->${ast.name}`);
                 }
 
-                const variable = ctx.get(ast.name) || ctx.local(ast.name);
+                const variable = ctx.reference(ast.name);
                 variable.used = true;
 
                 // Weak references cannot be evaluated until just before linker phase
@@ -474,6 +474,9 @@ async function* evaluate(ctx, tree) {
                         condition: evaluate_statement(ctx, token.condition)
                     };
                     break;
+
+                case "EndDirective":
+                    return;
 
                 default:
                     yield token;

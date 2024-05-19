@@ -3,7 +3,7 @@ const { passes } = require("./index.js")
 const {
     LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
     Message
-} = require ("../../util/logging.js");
+} = require("../../util/logging.js");
 
 // This simply blocks execution until the entire pass has run
 async function* lazy(feed) {
@@ -13,7 +13,7 @@ async function* lazy(feed) {
     for await (let block of feed) {
         if (block instanceof Message) {
             yield block;
-            continue ;
+            continue;
         }
 
         blocks.push(block);
@@ -23,10 +23,6 @@ async function* lazy(feed) {
 }
 
 async function* assemble(ctx, tree, warn = true) {
-    // Locate definitions pass
-    tree = passes.globals(ctx, tree);
-    tree = lazy(tree);
-
     // First pass
     tree = passes.evaluate(ctx, tree);
     tree = passes.localize(ctx, tree);
@@ -44,20 +40,22 @@ async function* assemble(ctx, tree, warn = true) {
     yield* tree;
 
     // If context has not been scoped, we need to simply move on
-    if (!warn) return ;
+    if (!warn) return;
 
     // We've finished up, now start complaining about floating values
     for (const name of ctx.nearVariables()) {
         const variable = ctx.get(name);
 
-        if (!variable.used) {
-            if (!variable.value) {
-                yield new Message(LEVEL_WARN, variable.location, `Unused identifier ${name}`);
-            } else {
-                yield new Message(LEVEL_WARN, variable.location, `Local variable ${name} is defined, but is never used`);
+        if (!variable.global) {
+            if (!variable.used) {
+                if (!variable.value) {
+                    yield new Message(LEVEL_WARN, variable.location, `Unused identifier ${name}`);
+                } else {
+                    yield new Message(LEVEL_WARN, variable.location, `Local variable ${name} is defined, but is never used`);
+                }
+            } else if (!variable.value) {
+                yield new Message(LEVEL_FAIL, variable.location, `Local variable ${name} is used, but is never defined`);
             }
-        } else if (!variable.value) {
-            yield new Message(LEVEL_FAIL, variable.location, `Local variable ${name} is used, but is never defined`);
         }
     }
 }

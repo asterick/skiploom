@@ -6,35 +6,67 @@ const {
 const { uuid } = require("../util/uuid.js");
 
 class Context {
-    constructor (parent, top = null) {
+    constructor(parent, top = null) {
         Object.assign(this, {
-            ... parent,
+            ...parent,
             name: uuid(),
             top: top || Object.create(parent.globals)
         });
     }
 
-    radix () {
+    radix() {
         return asNumber(this.get('radix').value);
     }
 
-    clone () {
+    clone() {
         return new Context(this, this.top);
     }
 
-    nest () {
+    nest() {
         return new Context(this, Object.create(this.top));
     }
 
-    local(name) {
+    reference(name) {
         if (this.globals.hasOwnProperty(name)) {
-            throw `Global ${name} is already defined`;
-        } else if (!this.top.hasOwnProperty(name)) {
-            // Empty local container
+            return this.globals[name];
+        } else if (!this.top[name]) {
             this.top[name] = {};
         }
 
         return this.top[name];
+    }
+
+    get(name) {
+        return this.top[name];
+    }
+
+    local(name) {
+        let ref = this.reference(name);
+
+        if (ref.global) {
+            throw `Global ${name} is already defined`;
+        }
+
+        ref.local = true;
+
+        return ref;
+    }
+
+    global(name) {
+        let ref = this.reference(name);
+
+        if (!ref.global) {
+            if (ref.local) {
+                throw `Cannot promote local of name ${name}`;
+            } else if (this.global[name]) {
+                throw `Global of name ${name} already exists`;
+            }
+
+            Object.assign(ref, { global: true, frozen: true });
+            this.globals[name] = ref;
+        }
+
+        return ref;
     }
 
     isNear(name) {
@@ -45,34 +77,17 @@ class Context {
         return Object.keys(this.top);
     }
 
-    global(name) {
-        if (this.top[name]) {
-            if (this.top[name] != this.globals[name]) {
-                throw `Local of name ${name} already exists`;
-            }
-        } else {
-            // Create container for variable
-            this.globals[name] = { global: true, frozen: true };
-        }
-
-        return this.top[name];
-    }
-
-    get(name) {
-        return this.top[name];
-    }
-
     toString() {
         return JSON.stringify(this.top);
     }
 
-    remove (name) {
+    remove(name) {
         let top = this.top;
 
         do {
             if (top.hasOwnProperty(name)) {
                 delete top[name];
-                break ;
+                break;
             }
 
             top = Object.getPrototypeOf(top);
@@ -99,7 +114,7 @@ class Context {
             if (!globals) globals = target;
 
             for (const [name, value] of Object.entries(top)) {
-                target[name] = { ... value };
+                target[name] = { ...value };
             }
         }
 
@@ -122,9 +137,9 @@ class Context {
             if (here == this.globals) {
                 // Only global namespace can mutate keys
                 names = new Set([
-                    ... Object.keys(here),
-                    ... Object.keys(onTrue),
-                    ... Object.keys(onFalse),
+                    ...Object.keys(here),
+                    ...Object.keys(onTrue),
+                    ...Object.keys(onFalse),
                 ]);
             } else {
                 names = Object.keys(here);

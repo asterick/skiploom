@@ -189,7 +189,6 @@ async function* macro(scope, feed) {
                         while ((step < 0) ? (count >= end) : (count <= end)) {
                             const ctx = scope.nest();
 
-
                             if (counter) {
                                 Object.assign(ctx.local(counter), {
                                     used: true,
