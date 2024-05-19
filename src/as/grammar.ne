@@ -260,10 +260,10 @@ symbol ->
     | "^" symbol {% unary %}
 
 register ->
-      %register {% ([id]) => ({ type:"Register", name:id.value, location:location(id) }) %}
+      %register {% ([id]) => ({ type:"Register", name:id.value.toUpperCase(), location:location(id) }) %}
 
 condition ->
-      %condition {% ([id]) => ({ type:"Condition", name:id.value, location:location(id) }) %}
+      %condition {% ([id]) => ({ type:"Condition", name:id.value.toUpperCase(), location:location(id) }) %}
 
 identifier ->
       %identifier {% ([id]) => ({ type:"Identifier", name:id.value, location:location(id) }) %}

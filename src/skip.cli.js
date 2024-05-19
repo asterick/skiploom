@@ -130,8 +130,35 @@ async function main() {
         console.error("LINKING IS NOT COMPLETE");
         process.exit(1);
     } else {
+        unmerged = [];
+        condensed = [];
+
+        function merge(blocks) {
+            if (blocks.length == 0) return [];
+
+            let length = blocks.reduce((acc, block) => (acc + block.byteLength), 0);
+            let buffer = new Uint8Array(length);
+            let index = 0;
+
+            for (let block of blocks) {
+                buffer.set(new Uint8Array(block), index);
+                index += block.byteLength;
+            }
+
+            unmerged = [];
+            return [buffer];
+        }
+
+        for (let block of blocks) {
+            if (block instanceof ArrayBuffer) {
+                unmerged.push(block);
+            } else {
+                condensed.push(...merge(unmerged), block);
+            }
+        }
+
         bson.save(argv.output, {
-            blocks, exports
+            blocks: [...condensed, ...merge(unmerged)], exports
         });
     }
 }

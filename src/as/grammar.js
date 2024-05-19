@@ -241,8 +241,8 @@ var grammar = {
     {"name": "symbol", "symbols": ["symbol", {"literal":"\\?"}, "identifier"], "postprocess": binary},
     {"name": "symbol", "symbols": ["symbol", {"literal":"\\%"}, "identifier"], "postprocess": binary},
     {"name": "symbol", "symbols": [{"literal":"^"}, "symbol"], "postprocess": unary},
-    {"name": "register", "symbols": [(lexer.has("register") ? {type: "register"} : register)], "postprocess": ([id]) => ({ type:"Register", name:id.value, location:location(id) })},
-    {"name": "condition", "symbols": [(lexer.has("condition") ? {type: "condition"} : condition)], "postprocess": ([id]) => ({ type:"Condition", name:id.value, location:location(id) })},
+    {"name": "register", "symbols": [(lexer.has("register") ? {type: "register"} : register)], "postprocess": ([id]) => ({ type:"Register", name:id.value.toUpperCase(), location:location(id) })},
+    {"name": "condition", "symbols": [(lexer.has("condition") ? {type: "condition"} : condition)], "postprocess": ([id]) => ({ type:"Condition", name:id.value.toUpperCase(), location:location(id) })},
     {"name": "identifier", "symbols": [(lexer.has("identifier") ? {type: "identifier"} : identifier)], "postprocess": ([id]) => ({ type:"Identifier", name:id.value, location:location(id) })},
     {"name": "string", "symbols": [(lexer.has("string") ? {type: "string"} : string)], "postprocess": ([id]) => ({ type:"String", value:id.value, location:location(id) })},
     {"name": "number", "symbols": [(lexer.has("number") ? {type: "number"} : number)], "postprocess": ([id]) => ({ type:"Number", value:id.value, location:location(id) })}
