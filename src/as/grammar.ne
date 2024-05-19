@@ -71,7 +71,7 @@ directive ->
     | "SYMB" expression_list {% ignore %}
 
     | define_section_directive
-    | "SECT" expression ("," "RESET"):? {% ([id,name,reset]) => ({ type: "SectionDirective", name, reset: reset != null, location:location(id)}) %}
+    | "SECT" expression ("," "WEAK"):? ("," "RESET"):? {% ([id,name,weak,reset]) => ({ type: "SectionDirective", name, reset: reset != null, weak: weak != null, location:location(id)}) %}
     | "ALIGN" expression {% ([id, value]) => ({ type: "AlignDirective", value, location:location(id) }) %}
     | "DEFINE" symbol expression {% ([id, name, value]) => ({ type: "DefineDirective", name, value, location:location(id) }) %}
     | "UNDEF" symbol_list {% ([id, names]) => ({ type: "UndefineDirective", names, location:location(id) }) %}

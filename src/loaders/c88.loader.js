@@ -5,7 +5,7 @@ const path = require("path");
 const {
     LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
     Message
-} = require ("../util/logging.js");
+} = require("../util/logging.js");
 
 const COMPILER_EXECUTABLE = path.join(__dirname, "../../bin/C88.EXE");
 
@@ -15,17 +15,17 @@ async function* defaultLoader(source_location, path, args) {
     const parser = sourceParser();
 
     try {
-        let stdout = execFileSync(COMPILER_EXECUTABLE, ['-v', '-n', '-Ml', path]);
+        let stdout = execFileSync(COMPILER_EXECUTABLE, ['-v', '-n', '-Ml', '-s', path]);
         global.parser_source = source_location;
         parser.feed(stdout.toString('utf-8'));
         parser.feed("\n");
         global.parser_source = prior_location;
-    } catch(e) {
+    } catch (e) {
         yield new Message(LEVEL_FATAL, `C compiler error: ${e.toString()}`);
-        return ;
+        return;
     }
 
-    yield *parser.results[0];
+    yield* parser.results[0];
 }
 
 module.exports = defaultLoader;
