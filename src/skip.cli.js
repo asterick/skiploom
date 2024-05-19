@@ -9,6 +9,7 @@ const { generate } = require("./util/table.js");
 const bson = require('./util/bson.js');
 
 const { context, assemble } = require("./as");
+const { linker } = require('./link');
 
 const {
     LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
@@ -127,8 +128,7 @@ async function main() {
 
     // Finally generate our output
     if (argv.link) {
-        console.error("LINKING IS NOT COMPLETE");
-        process.exit(1);
+        linker(blocks, exports);
     } else {
         unmerged = [];
         condensed = [];
