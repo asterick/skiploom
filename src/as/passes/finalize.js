@@ -18,12 +18,6 @@ async function* finalize(scope, tree) {
 
         try {
             switch (token.type) {
-                // Termination cases
-                case "EndDirective":
-                    // This terminates the assembler, so discard anything that comes after
-                    // bubble up so it terminates through all scopes
-                    yield token;
-                    return;
                 case "ExitMacroDirective":
                     yield new Message(LEVEL_FAIL, token.location, "Misplaced EXITM, Must be used inside of a macro");
                     return;

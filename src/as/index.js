@@ -57,14 +57,76 @@ async function* assemble(path, scope, loader) {
     const location = { source: "command-line" };
     const tree = passes.include(location, path, loader);
 
-    let fragmentDefined = [];
+    let defined = [];
     let section = null;
     let defsect = {};
 
-    for await (block of passes.assemble(scope, tree)) {
-        console.log(block);
-        yield block;
+    function* tareSecton() {
+        if (!section) {
+            return;
+        }
+
+        yield { ...section, defined };
+        defined = [];
     }
+
+    for await (block of passes.assemble(scope, tree)) {
+        switch (block.type) {
+            /* Non-sectioned emissions */
+            case 'Dependancy':
+                yield block;
+                continue;
+
+            /* Section declaration emissions */
+            case 'DefineSectionDirective':
+                {
+                    const { name, datatype, at, fit, target } = block;
+                    defsect[name.value] = { name, datatype, at, fit, target };
+                    continue;
+                }
+
+            case 'SectionDirective':
+                {
+                    const { name, reset, required } = block;
+                    const def = defsect[name.value];
+
+                    if (!def) {
+                        yield new Message(LEVEL_FAIL, block.location, `Forward declaration of section ${name.value}`);
+                        return;
+                    }
+
+                    yield* tareSecton();
+                    section = { type: "Section", body: [], name: name.value, reset, required };
+
+                    continue;
+                }
+
+            /* Contained declaration emissions */
+            case 'Fragment':
+                defined.push(block.id);
+            case "AsciiBlockDirective":
+            case "TerminatedAsciiBlockDirective":
+            case "DataBytesDirective":
+            case "DataWordsDirective":
+            case 'Binary':
+            case 'AlignDirective':
+            case 'BranchDirective':
+                if (section == null) {
+                    yield new Message(LEVEL_FAIL, block.location, `${block.type} outside of a defined section`);
+                    return;
+                }
+
+                section.body.push(block);
+                continue;
+
+            default:
+                throw `UNHANDLED ${block.type}`;
+                yield block;
+                continue;
+        }
+    }
+
+    yield* tareSecton();
 }
 
 module.exports = {

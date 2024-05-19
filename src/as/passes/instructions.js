@@ -243,7 +243,6 @@ async function* instructions(ctx, tree) {
                     yield* TypedDataBlock(token, asNumber, Uint16Array);
                     break;
                 case "DispatchDirective":
-                    // THIS DOES NOT WRAP
                     yield* assemble(token);
                     break;
                 default:

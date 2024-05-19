@@ -195,9 +195,9 @@ function flatten_binary(ast, ctx, guard) {
 function flatten(ast, ctx, propegate, guard) {
     switch (ast.type) {
         // Value types
+        case "Fragment":
         case "Register":
         case "Condition":
-        case "Fragment":
         case "String":
         case "IndirectRegister":
         case "IndirectRegisterIndex":
@@ -298,7 +298,6 @@ function evaluate_statement(ctx, tree, propegate = true) {
         throw "Attempted to evaluate an undefined field"
     }
 
-    // Flatten our expression
     return flatten(tree, ctx, propegate, []);
 }
 
