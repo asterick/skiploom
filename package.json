@@ -29,7 +29,7 @@
   "homepage": "https://github.com/asterick/skiploom#readme",
   "dependencies": {
     "argparse": "^2.0.1",
-    "moo": "^0.5.1",
+    "moo": "^0.5.2",
     "nearley": "^2.20.1"
   }
 }

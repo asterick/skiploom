@@ -16,7 +16,6 @@ ENDM
 ; ===
 ; === Memory scatter loader
 ; ===
-
         DEFSECT ".scatter_load", CODE, FIT 8000H, ROMDATA
         SECT ".scatter_load"
 _scatter_load:
