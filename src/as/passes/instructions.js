@@ -137,7 +137,7 @@ function* assemble(token) {
         }
 
         // Emit our opcode
-        yield op.code;
+        yield { type: "Binary", location: token.location, data: op.code };
 
         for (let [idx, imm] of Object.entries(imms)) {
             const type = op.immediates[idx];
@@ -170,14 +170,14 @@ function* assemble(token) {
                 };
             }
 
-            yield result;
+            yield { type: "Binary", location: token.location, data: result };
         }
     } else {
-        yield table[0].code;
+        yield { type: "Binary", location: token.location, data: table[0].code };
     }
 }
 
-function* TypedDataBlock({ type, data }, cast, array) {
+function* TypedDataBlock({ type, data, location }, cast, array) {
     let start = 0;
 
     while (start < data.length) {
@@ -208,9 +208,11 @@ function* TypedDataBlock({ type, data }, cast, array) {
                 }
             }
 
-            yield arr.buffer;
+            yield { type: "Binary", location, data: arr.buffer };
         } else {
-            yield* slice;
+            for (let data of slice) {
+                yield { type: "Binary", location, data };
+            }
         }
 
         start = range_end;
@@ -241,6 +243,7 @@ async function* instructions(ctx, tree) {
                     yield* TypedDataBlock(token, asNumber, Uint16Array);
                     break;
                 case "DispatchDirective":
+                    // THIS DOES NOT WRAP
                     yield* assemble(token);
                     break;
                 default:
