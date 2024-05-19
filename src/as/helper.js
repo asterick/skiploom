@@ -20,52 +20,52 @@ function asName(ast) {
 
 function asString(ast) {
     switch (ast.type) {
-    case "String":
-        return ast.value;
-    case "Number":
-        return ast.value.toString();
-    default:
-        throw `Cannot coerse ${ast.type} to string`;
+        case "String":
+            return ast.value;
+        case "Number":
+            return ast.value.toString();
+        default:
+            throw `Cannot coerse ${ast.type} to string`;
     }
 }
 
 function asNumber(ast) {
     switch (ast.type) {
-    case "Number":
-        return ast.value;
-    default:
-        throw `Cannot coerse ${ast.type} to number`;
+        case "Number":
+            return ast.value;
+        default:
+            throw `Cannot coerse ${ast.type} to number`;
     }
 }
 
 function asTruthy(ast) {
     switch (ast.type) {
-    case "Number":
-        return ast.value != 0;
-    case "String":
-        return ast.value !== "";
-    default:
-        throw `Cannot coerse ${ast.type} to number`;
+        case "Number":
+            return ast.value != 0;
+        case "String":
+            return ast.value !== "";
+        default:
+            throw `Cannot coerse ${ast.type} to number`;
     }
 }
 
 function autoType(value) {
     switch (typeof value) {
-    case "object":
-        return value ;
-    case "string":
-        return {
-            value,
-            type: "String"
-        };
-    case "boolean":
-        value = value ? 1 : 0;
-    case "number":
-        return {
-            value,
-            type: "Number"
-        };
-        break ;
+        case "object":
+            return value;
+        case "string":
+            return {
+                value,
+                type: "String"
+            };
+        case "boolean":
+            value = value ? 1 : 0;
+        case "number":
+            return {
+                value,
+                type: "Number"
+            };
+            break;
     }
 }
 

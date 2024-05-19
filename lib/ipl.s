@@ -6,10 +6,13 @@ irq DUPA flag, 277h, 276h, 275h, 274h, 273h, 272h, 271h, 270h, 285h, 284h, 283h,
         SECT (".irq_weak_handler" .. irq)
         GLOBAL WEAK _interrupt_handler\?irq
 _interrupt_handler\?irq:
+        PUSH EP
         PUSH BR
         LD BR, #20h
+        LD EP, #0
         LD [BR:(flag >> 4)], #(1 << (flag & 0fh))
         POP BR
+        POP EP
         RETE
 ENDM
 

@@ -12,7 +12,7 @@ async function* defaultLoader(source_location, path, args) {
     parser.feed("\n");
     global.parser_source = prior_location;
 
-    yield *parser.results[0];
+    yield* parser.results[0];
 }
 
 module.exports = defaultLoader;

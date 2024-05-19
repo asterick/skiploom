@@ -12,20 +12,20 @@ async function resolve(fn, relative = process.cwd()) {
         try {
             const stat = await fs.stat(fn);
             return { filename: fn, stat }
-        } catch(e) {
+        } catch (e) {
             return { stat: null }
         }
     }
 
     // Relative path, attempt to find
-    for (let root of [relative, ... searchPaths]) {
-        const filename = path.join(root,fn);
+    for (let root of [relative, ...searchPaths]) {
+        const filename = path.join(root, fn);
 
         try {
             const stat = await fs.stat(filename);
             return { filename, stat };
         } catch (e) {
-            continue ;
+            continue;
         }
     }
 

@@ -4,14 +4,14 @@ const { resolve } = require("../../util/resolve.js");
 const {
     LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO,
     Message
-} = require ("../../util/logging.js");
+} = require("../../util/logging.js");
 
-async function* include (location, target, module = "text.loader.js") {
+async function* include(location, target, module = "text.loader.js") {
     const querystring = module.indexOf("?");
     let args = null;
 
     if (querystring >= 0) {
-        args = new URLSearchParams(module.substring(querystring+1));
+        args = new URLSearchParams(module.substring(querystring + 1));
         module = module.substring(0, querystring);
     }
 
@@ -19,7 +19,7 @@ async function* include (location, target, module = "text.loader.js") {
 
     if (!stat) {
         yield new Message(LEVEL_FATAL, null, `Cannot resolve loader: ${module}`);
-        return ;
+        return;
     }
 
     const loader = require(filename);
@@ -29,7 +29,7 @@ async function* include (location, target, module = "text.loader.js") {
 
     if (!stat) {
         yield new Message(LEVEL_FATAL, null, `Cannot locate file: ${target}`);
-        return ;
+        return;
     }
 
     // Isolate our namespace
@@ -51,7 +51,7 @@ async function* include (location, target, module = "text.loader.js") {
     for await (let block of loader(source_location, filename, args)) {
         if (block instanceof Message) {
             yield block;
-            continue ;
+            continue;
         }
 
         yield block;

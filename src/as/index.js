@@ -2,6 +2,8 @@ const { expressionParser } = require("./parsers.js");
 const { Context } = require("./context.js");
 const { passes } = require("./passes/index.js")
 
+const { LEVEL_FATAL, LEVEL_FAIL, LEVEL_WARN, LEVEL_INFO, Message } = require("../util/logging.js");
+
 const {
     isValueType, autoType,
     asNumber, asString, asTruthy, asName,
@@ -54,7 +56,30 @@ async function* assemble(path, scope, loader) {
     // Load our file
     const location = { source: "command-line" };
     const tree = passes.include(location, path, loader);
-    yield* passes.assemble(scope, tree);
+
+    let fragmentDefined = [];
+    let section = null;
+    let defsect = {};
+
+    for await (block of passes.assemble(scope, tree)) {
+        switch (block.type) {
+            case 'Dependancy':
+                yield block;
+                continue;
+            case 'Fragment':
+                fragmentDefined.push(block.id);
+                yield block;
+                continue;
+            case 'DefineSectionDirective':
+            case 'SectionDirective':
+                yield block;
+                continue;
+            default:
+                console.log(block.type);
+                yield block;
+                continue;
+        }
+    }
 }
 
 module.exports = {
