@@ -5,10 +5,10 @@
         SECT ".irq_vectors", REQUIRED
         ; Setup our interrupt vectors
         JRL    _scatter_load
-        index DUP 25
+index DUP 25
         ALIGN 6
         JRL _interrupt_handler\?index
-        ENDM
+ENDM
 
 ; ===
 ; === Weak interrupt handlers
